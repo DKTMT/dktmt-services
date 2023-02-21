@@ -1,0 +1,76 @@
+version: '3.3'
+
+services:
+  api_gateway:
+    build: ./api_gateway
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      - ./api_gateway/api_gateway/settings.py
+    ports:
+      - "8000:8000"
+
+  auth_service:
+    build: ./auth_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      - ./auth_service/auth_service/settings.py
+    restart: on-failure
+    depends_on: 
+      - auth_service_db
+    ports:
+      - "8100:8000"
+
+  exchange_service:
+    build: ./exchange_service
+    user: root
+    command: >
+      sh -c "python manage.py migrate &&
+             service cron start && 
+             python manage.py crontab add &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      - ./exchange_service/exchange_service/settings.py
+    restart: on-failure
+    depends_on: 
+      - exchange_service_db
+    ports:
+      - "8200:8000"
+
+  auth_service_db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=${AUTH_SERVICE_DB_USERNAME}
+      - POSTGRES_PASSWORD=${AUTH_SERVICE_DB_PASSWORD}
+      - POSTGRES_DB=${AUTH_SERVICE_DB_NAME}
+    ports:
+      - "5432:5432"
+
+  exchange_service_db:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${EXCHANGE_SERVICE_DB_USERNAME}
+      - POSTGRES_PASSWORD=${EXCHANGE_SERVICE_DB_PASSWORD}
+      - POSTGRES_DB=${EXCHANGE_SERVICE_DB_NAME}
+    ports:
+      - "5433:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    depends_on: 
+      - auth_service_db
+      - exchange_service_db
+    ports:
+      - "8080:8080" 
