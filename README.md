@@ -68,6 +68,14 @@ At the project's root directory
 ```
 docker-compose up
 ```
+<details>
+<summary>Troubleshooting</summary>
+    <h4>Docker endpoint for "default" not found (Windows)</h4>
+    If the containers couldn't start and return 'docker endpoint for "default" not found' you can delete ~/.docker/contexts/meta/(some sha256)/meta.json. and  restart the Docker desktop
+    <br>
+    <a href="https://github.com/docker/compose/issues/9956#issuecomment-1294483086">Issue link</a>
+
+</details>
 
 ## Exploring APIs
 
