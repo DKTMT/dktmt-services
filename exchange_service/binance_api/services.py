@@ -26,7 +26,7 @@ class BinanceService():
         mac = hmac.new(byte_key, message, hashlib.sha256).hexdigest()
         return mac
 
-    def fetch_assets(self):
+    def fetch_assets(self, coin_values):
         # Set up the URL and headers for the API request
         url = f'{self.base_url}/account'
         data = { "timestamp": int(round(time.time() * 1000)) }
@@ -55,7 +55,7 @@ class BinanceService():
 
         # Fetch coin values for assets not in cache
         coins_to_fetch = [coin["asset"] for coin in account["balances"] if float(
-            coin["free"]) > 0 and coin["asset"] not in self.coin_values]
+            coin["free"]) > 0 and coin["asset"] not in coin_values]
         if coins_to_fetch:
             symbols = [f"{asset}USDT" for asset in coins_to_fetch]
             url = f"{self.base_url}/ticker/price?symbol={'&symbol='.join(symbols)}"
@@ -64,7 +64,7 @@ class BinanceService():
                 response.raise_for_status()
                 prices = response.json()
                 for symbol_price in prices:
-                    self.coin_values[symbol_price["symbol"]
+                    coin_values[symbol_price["symbol"]
                                      [:-4]] = float(symbol_price["price"])
             except requests.exceptions.RequestException as e:
                 pass
@@ -75,7 +75,7 @@ class BinanceService():
             if float(coin['free']) > 0:
                 # Get the asset symbol and calculate the free and locked values
                 asset = coin["asset"]
-                coin_price = self.coin_values.get(asset, 0)
+                coin_price = coin_values.get(asset, 0)
                 free_value = float(coin["free"]) * coin_price
                 locked_value = float(coin["locked"]) * coin_price
 

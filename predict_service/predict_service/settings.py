@@ -28,7 +28,7 @@ DB_PORT = os.environ.get("PREDICT_SERVICE_DB_PORT")
 DB_NAME = os.environ.get("PREDICT_SERVICE_DB_NAME")
 DB_USERNAME = os.environ.get("PREDICT_SERVICE_DB_USERNAME")
 DB_PASSWORD = os.environ.get("PREDICT_SERVICE_DB_PASSWORD")
-HOSTS = os.environ.get("PREDICT_SERVICE_ALLOWED_HOSTS").split(' ');
+HOSTS = os.environ.get("PREDICT_SERVICE_ALLOWED_HOSTS").split(' ')
 
 AUTH_SERVICE_HOST = os.environ.get("AUTH_SERVICE_HOST")
 AUTH_SERVICE_PORT = os.environ.get("AUTH_SERVICE_PORT")

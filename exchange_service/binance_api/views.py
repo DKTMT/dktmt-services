@@ -1,5 +1,7 @@
 import hmac
 import hashlib
+import requests
+import json
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -96,7 +98,7 @@ class PortView(APIView):
 
         binance_api = BinanceService(decrypt(user.encrypted_api_key),
                                      decrypt(user.encrypted_api_secret))
-        port_data = binance_api.fetch_assets()
+        port_data = binance_api.fetch_assets({})
     
         return Response({
             "coins_possess": port_data["coins_possess"],

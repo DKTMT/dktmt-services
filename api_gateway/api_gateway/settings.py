@@ -23,7 +23,7 @@ load_dotenv()
 
 # Load the variables from the environment variable
 APP_SECRET = os.environ.get("API_GATEWAY_APP_SECRET")
-HOSTS = os.environ.get("API_GATEWAY_ALLOWED_HOSTS").split(' ');
+HOSTS = os.environ.get("API_GATEWAY_ALLOWED_HOSTS").split(' ')
 
 AUTH_SERVICE_HOST = os.environ.get("AUTH_SERVICE_HOST")
 AUTH_SERVICE_PORT = os.environ.get("AUTH_SERVICE_PORT")

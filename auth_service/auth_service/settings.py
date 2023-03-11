@@ -28,7 +28,7 @@ DB_PORT = os.environ.get("AUTH_SERVICE_DB_PORT")
 DB_NAME = os.environ.get("AUTH_SERVICE_DB_NAME")
 DB_USERNAME = os.environ.get("AUTH_SERVICE_DB_USERNAME")
 DB_PASSWORD = os.environ.get("AUTH_SERVICE_DB_PASSWORD")
-HOSTS = os.environ.get("AUTH_SERVICE_ALLOWED_HOSTS").split(' ');
+HOSTS = os.environ.get("AUTH_SERVICE_ALLOWED_HOSTS").split(' ')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
