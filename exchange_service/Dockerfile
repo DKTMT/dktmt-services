@@ -12,8 +12,6 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     build-essential \
-    cron \
-    && touch /var/log/cron.log \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pip requirements
@@ -27,7 +25,6 @@ COPY . /app/
 EXPOSE 8000
 
 # Define the command to run the application
-CMD service cron restart\
-    && python manage.py crontab add\
+CMD python manage.py makemigrations\
     && python manage.py migrate\
     && python manage.py runserver 0.0.0.0:8000

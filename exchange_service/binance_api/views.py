@@ -1,21 +1,20 @@
+import hmac
+import hashlib
+
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
+from django.shortcuts import get_object_or_404
 
-
-import hmac
-import hashlib
-import binance
 from binance_api.models import UserAPI
-
-import json
 from binance_api.services import BinanceService
-# from binance_api.serializers import UserAPISerializer
-
+from binance_api.serializers import UserAPISerializer
 from exchange_service.settings import ENCRYPTION_KEY
+from exchange_service.utils import hash, encrypt, decrypt
 
-# test.
+
 class TestView(APIView):
     def get(self, request):
         response = Response()
@@ -23,183 +22,113 @@ class TestView(APIView):
             'message': 'test'
         }
         return response
-    
-# add new API key
-class BinanceAPIView(APIView):
-    @action(methods=['post'], detail=False, url_path='')
+
+
+class UserAPIView(APIView):
+    def get_object(self, email):
+        hashed_email = hash(email)
+        return get_object_or_404(UserAPI, hashed_email=hashed_email)
+
     def post(self, request):
-        body_unicode = request.body.decode('utf-8')
-        body = json.loads(body_unicode)
+        serializer = UserAPISerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
         email = request.user_data["email"]
-        exchange = body['exchange']
-        api_key = body['api_key']
-        api_secret = body['api_secret']
-        
-        client = binance.Client( api_key, api_secret)
-        info = client.get_exchange_info()
-        timez = info['serverTime']
-        
-        # hash the email and encrypt api_key and api_secret
-        userAPI = UserAPI()
-        hashed_email = userAPI.hash(email)
-        encrypted_api_key = userAPI.encrypt(api_key)
-        encrypted_api_secret = userAPI.encrypt(api_secret)
-        
-        UserAPI.objects.create(
-            hashed_email=hashed_email,
-            exchange=exchange,
-            encrypted_api_key=encrypted_api_key,
-            encrypted_api_secret=encrypted_api_secret
+        user = UserAPI.objects.create(
+            hashed_email=hash(email),
+            exchange = serializer.data['exchange'],
+            encrypted_api_key = encrypt(serializer.data['api_key']),
+            encrypted_api_secret = encrypt(serializer.data['api_secret'])
         )
-        
-        response = Response()
-        response.data = {
+
+        response_data = {
             'email': email,
-            'api_key': api_key,
-            'exchange': exchange,
-            'api_secret': api_secret
+            **serializer.validated_data
         }
-        return response
-    
-    @action(methods=['get'], detail=False, url_path='')
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
     def get(self, request):
         email = request.user_data["email"]
-        userAPI = UserAPI()
-        hashed_email = userAPI.hash(email)
-        # check from db
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
-            raise AuthenticationFailed('User not found!')
-        
-        response = Response()
-        response.data = {
+        user = self.get_object(email)
+
+        response_data = {
             'api_key': user.api_key,
             'api_secret': user.api_secret
         }
-        return response
-    
+        return Response(response_data)
+
     def put(self, request):
-        body_unicode = request.body.decode('utf-8')
-        body = json.loads(body_unicode)
+        serializer = UserAPISerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
         email = request.user_data["email"]
-        exchange = body['exchange']
-        api_key = body['api_key']
-        api_secret = body['api_secret']
-        
-        # hash the email and encrypt api_key and api_secret
-        userAPI = UserAPI()
-        hashed_email = userAPI.hash(email)
-        encrypted_api_key = userAPI.encrypt(api_key)
-        encrypted_api_secret = userAPI.encrypt(api_secret)
-        
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
-            raise AuthenticationFailed('User not found!')
-        user.encrypted_api_key = encrypted_api_key;
-        user.encrypted_api_secret = encrypted_api_secret;
+        user = self.get_object(email)
+        user.api_key = serializer.validated_data['api_key']
+        user.api_secret = serializer.validated_data['api_secret']
         user.save()
-        
-        response = Response()
-        response.data = {
+
+        response_data = {
             'email': email,
-            'api_key': api_key,
-            'exchange': exchange,
-            'api_secret': api_secret
+            **serializer.validated_data
         }
-        return response
-    
+        return Response(response_data)
+
     def delete(self, request):
         email = request.user_data["email"]
-        userAPI = UserAPI()
-        hashed_email = userAPI.hash(email)
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
-            raise AuthenticationFailed('User not found!')
+        user = self.get_object(email)
         user.delete()
-        
-        response = Response()
-        response.data = {
-            'message': "API of email: {} deleted".format(email)
-        }
-        return response
 
-# get total portfolio value
+        response_data = {
+            'message': f"API of email: {email} deleted"
+        }
+        return Response(response_data)
+
+
 class PortView(APIView):
     def get(self, request):
         email = request.user_data["email"]
-        hashed_email = hmac.new(bytes(ENCRYPTION_KEY, 'utf-8'), bytes(email, 'utf-8'), digestmod=hashlib.sha256).hexdigest()
-        # check from db
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
-            raise AuthenticationFailed('User not found!')
-        
-        binance_api = BinanceService()
-        binance_api.api_key = user.api_key
-        binance_api.api_secret = user.api_secret
-        port_data = binance_api.fetch_assets({})
+        hashed_email = hash(email)
 
-        response = Response()
-        response.data = {
+        try:
+            user = UserAPI.objects.get(hashed_email=hashed_email)
+        except UserAPI.DoesNotExist:
+            raise AuthenticationFailed('User not found!')
+
+        binance_api = BinanceService(decrypt(user.encrypted_api_key),
+                                     decrypt(user.encrypted_api_secret))
+        port_data = binance_api.fetch_assets()
+    
+        return Response({
             "coins_possess": port_data["coins_possess"],
             "port_value":  port_data["port_value"]
-        }
-        return response
+        })
+
 
 class OrderView(APIView):
-    # get all orders (buying and selling)
+    def authenticate_and_get_binance_api(self, request):
+        email = request.user_data["email"]
+        hashed_email = hmac.new(bytes(ENCRYPTION_KEY, 'utf-8'),
+                                bytes(email, 'utf-8'), digestmod=hashlib.sha256).hexdigest()
+        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
+        if user is None:
+            raise AuthenticationFailed('User not found!')
+        binance_api = BinanceService(decrypt(user.encrypted_api_key),
+                                     decrypt(user.encrypted_api_secret))
+        return binance_api
+
     def get(self, request):
-        email = request.user_data["email"]
-        hashed_email = hmac.new(bytes(ENCRYPTION_KEY, 'utf-8'), bytes(email, 'utf-8'), digestmod=hashlib.sha256).hexdigest()
-        # check from db
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
-            raise AuthenticationFailed('User not found!')
-        
-        binance_api = BinanceService()
-        binance_api.api_key = user.api_key
-        binance_api.api_secret = user.api_secret
+        binance_api = self.authenticate_and_get_binance_api(request)
         orders = binance_api.fetch_orders()
-        
-        response = Response()
-        response.data = {
-            'message': orders
-        }
+        response = Response({"orders": orders})
         return response
-    
-    # add new order
+
     def post(self, request):
-        email = request.user_data["email"]
-        hashed_email = hmac.new(bytes(ENCRYPTION_KEY, 'utf-8'), bytes(email, 'utf-8'), digestmod=hashlib.sha256).hexdigest()
-        # check from db
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
-            raise AuthenticationFailed('User not found!')
-
-        binance_api = BinanceService()
-        binance_api.api_key = user.api_key
-        binance_api.api_secret = user.api_secret
-        
-        body_unicode = request.body.decode('utf-8')
-        body = json.loads(body_unicode)
-
-        orders = binance_api.create_order(
-            body["symbol"],
-            body["side"],
-            body["order_type"],
-            body["quantity"],
-            body["price"]
-        )
-        
-        response = Response()
-        response.data = orders
-        return response
-    
-    # remove order
-    def delete(self, request):
-        response = Response()
-        response.data = {
-            'message': 'removed order'
-        }
+        binance_api = self.authenticate_and_get_binance_api(request)
+        symbol = request.data.get('symbol')
+        side = request.data.get('side')
+        order_type = request.data.get('order_type')
+        quantity = request.data.get('quantity')
+        price = request.data.get('price')
+        orders = binance_api.create_order(symbol, side, order_type, quantity, price)
+        response = Response(orders)
         return response

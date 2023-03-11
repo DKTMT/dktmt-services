@@ -2,8 +2,9 @@
 *.pot
 *.pyc
 .env
-__pycache__
 db.sqlite3
 media
 .DS_Store
 .vscode
+test/
+__pycache__/

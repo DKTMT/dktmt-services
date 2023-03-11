@@ -1,15 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
-from django.forms.models import model_to_dict
 
 from portfolios.models import Portfolio
+from exchange_service.utils import hash
 
 # Create your views here.
 class PortChangesView(APIView):
     def get(self, request):
         port = Portfolio()
-        hashed_email = port.hash(request.user_data["email"])
+        hashed_email = hash(request.user_data["email"])
 
         # check from db
         port_changes = Portfolio.objects.filter(hashed_email=hashed_email)
