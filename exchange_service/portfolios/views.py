@@ -9,7 +9,7 @@ from exchange_service.utils import hash
 class PortChangesView(APIView):
     def get(self, request):
         port = Portfolio()
-        hashed_email = hash(request.user_data["email"])
+        hashed_email = hash(request.data["email"])
 
         # check from db
         port_changes = Portfolio.objects.filter(hashed_email=hashed_email)

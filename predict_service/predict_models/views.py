@@ -1,37 +1,30 @@
+import json
+import requests
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from django.shortcuts import render
+from .predict import get_predict_result, get_strategies
 
-import requests
-import json
-
-symbol = 'BTCUSDT'
-interval = '15m'
-limit = 40 # 10 hours of data with 15 minute intervals
-
-url = 'https://api.binance.com/api/v3/klines'
-params = {
-    'symbol': symbol,
-    'interval': interval,
-    'limit': limit
-}
-
-response = requests.get(url, params=params)
-data = json.loads(response.text)
 
 # Create your views here.
 class StrategyView(APIView):
     def get(self, request):
-        return Response()
+        response = Response()
+        response.data = {
+            'strategies':  get_strategies()
+        }
+        return response
     
 class PredictView(APIView):
     # params 1.coin 2.timeframe 3.exchange 4.predictor(s)
     def get(self, request):
-        symbol = request.data['coin']
+        print(request.data)
+
+        symbol = request.data['symbol']
         interval = request.data['timeframe']
         exchange = request.data['exchange']
-        predictors = request.data['predictor']
+        predictors = request.data['strategies']
 
         # get data from binance interval between 15min to 1day
         url = 'https://api.binance.com/api/v3/klines'
@@ -41,10 +34,14 @@ class PredictView(APIView):
             'limit': 200
         }
         response = requests.get(url, params=params)
-        data = response.json()
-
+        market_data = response.json()
+        results = {}
         for predictor in predictors:
+            result = get_predict_result(predictor, market_data)
+            results[predictor] = result
 
-            print ()
-
-        return Response()
+        response = Response()
+        response.data = {
+            'results': results
+        }
+        return response

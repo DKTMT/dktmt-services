@@ -12,7 +12,6 @@ class OAuthValidationMiddleware:
         validate_url = "http://" + AUTH_SERVICE_HOST + ":" + AUTH_SERVICE_PORT + "/api/auth/validate"
         try:
             response = requests.request(method="GET", url=validate_url, headers=request.headers)
-            request.user_data = json.loads(response.content)
             if (response.status_code != 200):
                 return HttpResponse('Unauthorized', status=401)
         except:

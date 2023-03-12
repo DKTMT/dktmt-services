@@ -1,6 +1,6 @@
 import requests
 from django.http import HttpResponse, HttpResponseBadRequest
-from api_gateway.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST, EXCHANGE_SERVICE_PORT, EXCHANGE_SERVICE_HOST, NOTI_SERVICE_PORT, NOTI_SERVICE_HOST, PREDICT_SERVICE_PORT, PREDICT_SERVICE_HOST, TASK_HANDLE_SERVICE_PORT, TASK_HANDLE_SERVICE_HOST
+from api_gateway.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST, EXCHANGE_SERVICE_PORT, EXCHANGE_SERVICE_HOST, NOTI_SERVICE_PORT, NOTI_SERVICE_HOST, PREDICT_SERVICE_PORT, PREDICT_SERVICE_HOST, TASK_HANDLER_SERVICE_PORT, TASK_HANDLER_SERVICE_HOST
 
 
 class ReverseProxyMiddleware:
@@ -17,10 +17,7 @@ class ReverseProxyMiddleware:
                 microservice_url = "http://" + EXCHANGE_SERVICE_HOST + ":" + EXCHANGE_SERVICE_PORT + request.path
             # task handler service
             elif request.path.startswith('/api/task'):
-                microservice_url = "http://" + TASK_HANDLE_SERVICE_HOST + ":" + TASK_HANDLE_SERVICE_PORT + request.path
-            # model service
-            elif request.path.startswith('/api/predict'):
-                microservice_url = "http://" + PREDICT_SERVICE_HOST + ":" + PREDICT_SERVICE_PORT + request.path
+                microservice_url = "http://" + TASK_HANDLER_SERVICE_HOST + ":" + TASK_HANDLER_SERVICE_PORT + request.path
             # notification service
             elif request.path.startswith('/api/noti'):
                 microservice_url = "http://" + NOTI_SERVICE_HOST + ":" + NOTI_SERVICE_PORT + request.path

@@ -126,11 +126,11 @@ class OrderView(APIView):
 
     def post(self, request):
         binance_api = self.authenticate_and_get_binance_api(request)
-        symbol = request.data.get('symbol')
-        side = request.data.get('side')
-        order_type = request.data.get('order_type')
-        quantity = request.data.get('quantity')
-        price = request.data.get('price')
+        symbol = request.data['symbol']
+        side = request.data['side']
+        order_type = request.data['order_type']
+        quantity = request.data['quantity']
+        price = request.data['price']
         orders = binance_api.create_order(symbol, side, order_type, quantity, price)
         response = Response(orders)
         return response

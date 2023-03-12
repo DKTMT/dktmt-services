@@ -45,6 +45,36 @@ services:
     ports:
       - "8200:8000"
 
+  task_handler_service:
+    build: ./task_handler_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      - ./task_handler_service/task_handler_service/settings.py
+    restart: on-failure
+    depends_on: 
+      - task_handler_service_db
+    ports:
+      - "8300:8000"
+
+  predict_service:
+    build: ./predict_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      - ./predict_service/predict_service/settings.py
+    restart: on-failure
+    depends_on: 
+      - predict_service_db
+    ports:
+      - "8400:8000"
+
   auth_service_db:
     image: postgres:latest
     environment:
@@ -64,6 +94,28 @@ services:
       - POSTGRES_DB=${EXCHANGE_SERVICE_DB_NAME}
     ports:
       - "5433:5432"
+
+  task_handler_service_db:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${TASK_HANDLER_SERVICE_DB_USERNAME}
+      - POSTGRES_PASSWORD=${TASK_HANDLER_SERVICE_DB_PASSWORD}
+      - POSTGRES_DB=${TASK_HANDLER_SERVICE_DB_NAME}
+    ports:
+      - "5434:5432"
+
+  predict_service_db:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${PREDICT_SERVICE_DB_USERNAME}
+      - POSTGRES_PASSWORD=${PREDICT_SERVICE_DB_PASSWORD}
+      - POSTGRES_DB=${PREDICT_SERVICE_DB_NAME}
+    ports:
+      - "5435:5432"
 
   adminer:
     image: adminer

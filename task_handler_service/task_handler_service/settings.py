@@ -32,10 +32,10 @@ HOSTS = os.environ.get("TASK_HANDLER_SERVICE_ALLOWED_HOSTS").split(' ')
 
 AUTH_SERVICE_HOST = os.environ.get("AUTH_SERVICE_HOST")
 AUTH_SERVICE_PORT = os.environ.get("AUTH_SERVICE_PORT")
-AUTH_SERVICE_HOST = os.environ.get("PREDICT_SERVICE_HOST")
-AUTH_SERVICE_PORT = os.environ.get("PREDICT_SERVICE_PORT")
-AUTH_SERVICE_HOST = os.environ.get("EXCHANGE_SERVICE_HOST")
-AUTH_SERVICE_PORT = os.environ.get("EXCHANGE_SERVICE_PORT")
+PREDICT_SERVICE_HOST = os.environ.get("PREDICT_SERVICE_HOST")
+PREDICT_SERVICE_PORT = os.environ.get("PREDICT_SERVICE_PORT")
+EXCHANGE_SERVICE_HOST = os.environ.get("EXCHANGE_SERVICE_HOST")
+EXCHANGE_SERVICE_PORT = os.environ.get("EXCHANGE_SERVICE_PORT")
 
 ENCRYPTION_KEY = os.environ.get("EXCHANGE_SERVICE_ENCRYPTION_KEY")
 PUBLIC_KEY = os.environ.get("EXCHANGE_SERVICE_PUBLIC_KEY")
@@ -73,6 +73,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "task_handler_service.middleware.OAuthValidationMiddleware",
 ]
 
 ROOT_URLCONF = "task_handler_service.urls"
