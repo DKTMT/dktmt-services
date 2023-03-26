@@ -1,5 +1,5 @@
-from order.models import Order
-from order.serializers import OrderSerializer
+from orders.models import Order
+from orders.serializers import OrderSerializer
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -38,17 +38,6 @@ class UserAPIView(APIView):
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
-    # Get the API key and secret of the authenticated user
-    def get(self, request):
-        email = request.user_data["email"]
-        user = self.get_object(email)
-
-        response_data = {
-            'api_key': user.api_key,
-            'api_secret': user.api_secret
-        }
-        return Response(response_data)
-
     # Update the UserAPI object with the provided data
     def put(self, request):
         serializer = UserAPISerializer(data=request.data)
@@ -76,7 +65,24 @@ class UserAPIView(APIView):
             'message': f"API of email: {email} deleted"
         }
         return Response(response_data)
-
+    
+class UserAPIValidateView(APIView):
+    def get(self, request):
+        email = request.user_data["email"]
+        hashed_email = hash(email)
+        try:
+            user = UserAPI.objects.get(hashed_email=hashed_email)
+        except UserAPI.DoesNotExist:
+            raise AuthenticationFailed('User not found!')
+        binance_api = BinanceService(decrypt(user.encrypted_api_key),
+                                     decrypt(user.encrypted_api_secret))
+        response_data = {"result" : binance_api.validate_binance_api()}
+        return Response(response_data)
+    
+    def post(self, request):
+        binance_api = BinanceService(request.data["api_key"],request.data["api_secret"])
+        response_data = {"result" : binance_api.validate_binance_api()}
+        return Response(response_data)
 
 class PortView(APIView):
     def get(self, request):

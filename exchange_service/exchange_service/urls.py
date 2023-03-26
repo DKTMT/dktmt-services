@@ -17,5 +17,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path("api/exchange/binance/", include("binance_api.urls")),
-    path("api/exchange/order/", include("order.urls")),
+    path("api/exchange/order/", include("orders.urls")),
 ]

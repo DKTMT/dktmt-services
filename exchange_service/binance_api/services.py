@@ -19,6 +19,24 @@ class BinanceService():
         self.api_key = api_key
         self.api_secret = api_secret
 
+    def validate_binance_api(self):
+        # Define the endpoint and parameters
+        endpoint = f'{self.base_url}/account'
+        data = { "timestamp": int(round(time.time() * 1000)) }
+        headers = {'X-MBX-APIKEY': self.api_key}
+        signature = self.get_binance_signature(data)
+        params={
+            **data,
+            "signature": signature,
+        }
+
+        # Send the request and check the response status code
+        response = requests.get(endpoint, params=params, headers=headers)
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+
     def get_binance_signature(self, data):
         postdata = urllib.parse.urlencode(data)
         message = postdata.encode()
@@ -47,52 +65,45 @@ class BinanceService():
         # Convert the response data to a JSON object
         account = response.json()
 
-        # Initialize the portfolio object
         port = {
             "coins_possess": [],
             "port_value": 0
         }
-
-        # Fetch coin values for assets not in cache
-        coins_to_fetch = [coin["asset"] for coin in account["balances"] if float(
-            coin["free"]) > 0 and coin["asset"] not in coin_values]
-        if coins_to_fetch:
-            symbols = [f"{asset}USDT" for asset in coins_to_fetch]
-            url = f"{self.base_url}/ticker/price?symbol={'&symbol='.join(symbols)}"
-            try:
-                response = requests.get(url)
-                response.raise_for_status()
-                prices = response.json()
-                for symbol_price in prices:
-                    coin_values[symbol_price["symbol"]
-                                     [:-4]] = float(symbol_price["price"])
-            except requests.exceptions.RequestException as e:
-                pass
-
-        # Loop through each coin in the account balances
         for coin in account['balances']:
-            # Only include coins with a positive free balance
-            if float(coin['free']) > 0:
-                # Get the asset symbol and calculate the free and locked values
+            if(float(coin['free'])>0):
+                # {'asset': 'BTC', 'free': '0.00000000', 'locked': '0.00000000'}
                 asset = coin["asset"]
-                coin_price = coin_values.get(asset, 0)
-                free_value = float(coin["free"]) * coin_price
-                locked_value = float(coin["locked"]) * coin_price
-
-                # Add the coin data to the portfolio object
+                if asset in coin_values:
+                    free_value = float(coin["free"]) * float(coin_values[asset])
+                    locked_value = float(coin["locked"]) * float(coin_values[asset])
+                # If we dont have fetch new data
+                else:
+                    try:
+                        url = f"{self.base_url}/ticker/price?symbol={asset}USDT"
+                        response = requests.get(url)
+                        response.raise_for_status()
+                        real_time_data = response.json()
+                        coin_price = real_time_data["price"]
+                    except:
+                        if (asset == "USDT"): coin_price = 1
+                        else: coin_price = 0
+                    
+                    # set current coin value to the table
+                    
+                    coin_values[asset] = coin_price
+                    # set value
+                    free_value = float(coin["free"]) * float(coin_price)
+                    locked_value = float(coin["locked"]) * float(coin_price)
+                
                 data = {
-                    "asset": asset,
+                    "asset" : asset,
                     "free_amount": float(coin["free"]),
                     "free_value": free_value,
                     "locked_amount": float(coin["locked"]),
                     "locked_value": locked_value,
                 }
                 port["coins_possess"].append(data)
-
-                # Update the portfolio value with the current coin's free and locked values
-                port["port_value"] += free_value + locked_value
-
-        # Return the portfolio object
+                port["port_value"] = port["port_value"] + free_value + locked_value
         return port
 
     def fetch_orders(self):
