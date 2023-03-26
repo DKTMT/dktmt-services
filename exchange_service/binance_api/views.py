@@ -1,19 +1,15 @@
-import hmac
-import hashlib
-import requests
-import json
+from order.models import Order
+from order.serializers import OrderSerializer
 
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
 from django.shortcuts import get_object_or_404
 
 from binance_api.models import UserAPI
 from binance_api.services import BinanceService
 from binance_api.serializers import UserAPISerializer
-from exchange_service.settings import ENCRYPTION_KEY
 from exchange_service.utils import hash, encrypt, decrypt
 
 
@@ -103,30 +99,36 @@ class PortView(APIView):
 
 
 class OrderView(APIView):
-    def authenticate_and_get_binance_api(self, request):
+    def get(self, request):
+        orders = Order.objects.filter(exchange='binance')
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        serializer = OrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         email = request.user_data["email"]
-        hashed_email = hmac.new(bytes(ENCRYPTION_KEY, 'utf-8'),
-                                bytes(email, 'utf-8'), digestmod=hashlib.sha256).hexdigest()
-        user = UserAPI.objects.filter(hashed_email=hashed_email).first()
-        if user is None:
+        hashed_email =  hash(email)
+
+        try:
+            user = UserAPI.objects.get(hashed_email=hashed_email)
+        except UserAPI.DoesNotExist:
             raise AuthenticationFailed('User not found!')
         binance_api = BinanceService(decrypt(user.encrypted_api_key),
                                      decrypt(user.encrypted_api_secret))
-        return binance_api
+        binance_api.create_order(
+            symbol=serializer.validated_data['symbol'],
+            side=serializer.validated_data['side'],
+            quantity=serializer.validated_data['quantity'],
+            price=serializer.validated_data['price'],
+        )
+        
+        order_data = request.data
+        order_data['hashed_email'] = hashed_email
+        order_data['exchange'] = 'binance'
 
-    def get(self, request):
-        binance_api = self.authenticate_and_get_binance_api(request)
-        orders = binance_api.fetch_orders()
-        response = Response({"orders": orders})
-        return response
+        order = Order.objects.create(**order_data)
+        order_data['order_id'] = order.order_id
 
-    def post(self, request):
-        binance_api = self.authenticate_and_get_binance_api(request)
-        symbol = request.data['symbol']
-        side = request.data['side']
-        order_type = request.data['order_type']
-        quantity = request.data['quantity']
-        price = request.data['price']
-        orders = binance_api.create_order(symbol, side, order_type, quantity, price)
-        response = Response(orders)
-        return response
+        return Response(order_data)

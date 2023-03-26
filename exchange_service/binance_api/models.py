@@ -25,14 +25,3 @@ class UserAPI(models.Model):
     def api_secret(self):
         """Return the decrypted API secret"""
         return decrypt(self.encrypted_api_secret)
-    
-class Ticket(models.Model):
-    ticket_id = models.AutoField(primary_key=True)
-    hashed_email = models.CharField(max_length=255)
-    exchange_type = models.CharField(max_length=255)
-    order_type = models.CharField(max_length=4, choices=(('buy', 'Buy'), ('sell', 'Sell')))
-    order_id = models.CharField(max_length=255)
-    order_value = models.DecimalField(max_digits=10, decimal_places=2)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    

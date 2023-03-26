@@ -96,61 +96,48 @@ class BinanceService():
         return port
 
     def fetch_orders(self):
-        # Set up the URL and headers for the API request
-        url = f'{self.base_url}/allOrders'
-        data = { 'timestamp': int(time.time() * 1000) }
-        headers = { 'X-MBX-APIKEY': self.api_key }
-        signature = self.get_binance_signature(data)
-        params={
-            **data,
-            "signature": signature,
-        }
+        # Define the endpoint and parameters
+        endpoint = f'{self.base_url}/api/v3/allOrders'
+        timestamp = int(time.time() * 1000)
+        params = {'timestamp': timestamp}
+        headers = {'X-MBX-APIKEY': self.api_key}
 
-        # Make the API request and check for any errors
-        response = requests.get(url, headers=headers, params=params)
-        if response.status_code != 200:
-            raise AuthenticationFailed('API key or secret error')
-
-        # Convert the response data to a JSON object and return it
-        orders = json.loads(response.content)
-        return orders
-
-    def create_order(self, symbol, side, order_type, quantity, price):
-        # Set up the URL and headers for the API request
-        url = f'{self.base_url}/api/v3/order'
-        headers = {
-            'X-MBX-APIKEY': self.api_key
-        }
-
-        # Set up the request parameters
-        params = {
-            'symbol': symbol,
-            'side': side,
-            'type': order_type,
-            'quantity': quantity,
-            'timestamp': int(time.time() * 1000),
-        }
-
-        # If the order is a limit order, include the price parameter
-        if order_type == 'LIMIT':
-            params['timeInForce'] = 'GTC'
-            params['price'] = price
-
-        # Create the signature for the request
-        query_string = '&'.join([f'{k}={v}' for k, v in params.items()])
-        signature = hmac.new(self.api_secret.encode(
-            'utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+        # Generate the signature
+        signature_data = urllib.parse.urlencode(params)
+        signature_data = signature_data.encode('utf-8')
+        signature = self.get_binance_signature(self.api_secret, signature_data)
 
         # Add the signature to the request parameters
         params['signature'] = signature
 
-        # Make the API request and check for any errors
-        response = requests.post(url, headers=headers, params=params)
-        if response.status_code != 200:
-            raise Exception('Failed to create order')
+        # Send the request and return the response
+        response = requests.get(endpoint, params=params, headers=headers)
+        return response.json()
 
-        # Convert the response data to a JSON object
-        order_data = json.loads(response.content)
+    def create_order(self, symbol, side, quantity, price):
+        # Define the endpoint and parameters
+        endpoint = f'{self.base_url}/api/v3/order'
+        timestamp = int(time.time() * 1000)
+        params = {
+            'symbol': symbol,
+            'side': side,
+            'quantity': quantity,
+            'type': 'MARKET',
+            'timestamp': timestamp,
+            'recvWindow': 5000,
+        }
+        if price is not None:
+            params['price'] = price
+        headers = {'X-MBX-APIKEY': self.api_key}
 
-        # Return the order data
-        return order_data
+        # Generate the signature
+        signature_data = urllib.parse.urlencode(params)
+        signature_data = signature_data.encode('utf-8')
+        signature = self.get_binance_signature(self.api_secret, signature_data)
+
+        # Add the signature to the request parameters
+        params['signature'] = signature
+
+        # Send the request and return the response
+        response = requests.post(endpoint, params=params, headers=headers)
+        return response.json()
