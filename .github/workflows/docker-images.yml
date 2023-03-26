@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Load environment file
+      run: |
+        echo "$DOCKER_COMPOSE_ENV_FILE" > .env
+      env:
+        DOCKER_COMPOSE_ENV_FILE: ${{ secrets.DOCKER_COMPOSE_ENV_FILE }}
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and test services
+      run: |
+        docker-compose --env-file .env build
+        docker-compose --env-file .env up -d
+        sleep 5s
+        docker-compose --env-file .env ps
+        # Run tests here
+        docker-compose --env-file .env down
