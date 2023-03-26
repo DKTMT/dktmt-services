@@ -4,7 +4,7 @@ from exchange_service.utils import encrypt, decrypt
 # Create your models here.
 class UserAPI(models.Model):
     hashed_email = models.CharField(max_length=255, unique=True)
-    exchange = models.CharField(max_length=255, unique=True)
+    exchange = models.CharField(max_length=255)
     encrypted_api_key = models.TextField()
     encrypted_api_secret = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

@@ -17,20 +17,13 @@ from exchange_service.settings import ENCRYPTION_KEY
 from exchange_service.utils import hash, encrypt, decrypt
 
 
-class TestView(APIView):
-    def get(self, request):
-        response = Response()
-        response.data = {
-            'message': 'test'
-        }
-        return response
-
-
 class UserAPIView(APIView):
+    # Retrieve UserAPI object by hashing the email and searching for it in the database
     def get_object(self, email):
         hashed_email = hash(email)
         return get_object_or_404(UserAPI, hashed_email=hashed_email)
 
+    # Create a new UserAPI object with the provided data
     def post(self, request):
         serializer = UserAPISerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -49,6 +42,7 @@ class UserAPIView(APIView):
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+    # Get the API key and secret of the authenticated user
     def get(self, request):
         email = request.user_data["email"]
         user = self.get_object(email)
@@ -59,6 +53,7 @@ class UserAPIView(APIView):
         }
         return Response(response_data)
 
+    # Update the UserAPI object with the provided data
     def put(self, request):
         serializer = UserAPISerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -75,6 +70,7 @@ class UserAPIView(APIView):
         }
         return Response(response_data)
 
+    # Delete the UserAPI object associated with the authenticated user
     def delete(self, request):
         email = request.user_data["email"]
         user = self.get_object(email)
