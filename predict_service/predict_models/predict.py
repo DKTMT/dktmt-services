@@ -37,7 +37,7 @@ def run_strategies_find():
     
     return file_names
 
-def run_backtest(predictor, market_data):
+def run_backtest_performance(predictor, market_data):
     # Get the full path to the directory containing the Python files
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sys.path.insert(0, os.path.join(BASE_DIR, 'technical_analysis'))
@@ -56,44 +56,56 @@ def run_backtest(predictor, market_data):
         if hasattr(module, predictor):
             func = getattr(module, predictor)
             data = [dict(zip(['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'num_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'], map(float, entry))) for entry in market_data]
-            signals = []
-            true_positives = 0
-            false_positives = 0
-            false_negatives = 0
-            hold_count = 0
+            correct = 0 
+            incorrect = 0
+            budget = 100000
+            last_buy = 0
+            last_trade = "sell"
+            trade_count = 0
 
             for i in range(200, 400):
                 signal = func(market_data[i-200:i])
-                signals.append(signal)
-                if i < len(data) - 1:
-                    if signal == 'buy' and data[i + 1]['close'] > data[i]['close']:
-                        true_positives += 1
-                    elif signal == 'buy' and data[i + 1]['close'] <= data[i]['close']:
-                        false_positives += 1
-                    elif signal == 'sell' and data[i + 1]['close'] < data[i]['close']:
-                        true_positives += 1
-                    elif signal == 'sell' and data[i + 1]['close'] >= data[i]['close']:
-                        false_positives += 1
-                    elif signal == 'hold':
-                        hold_count += 1
-                        false_negatives += 1
-                    else:
-                        false_negatives += 1
+                # cutlost and out condition
+                if (last_trade == "buy" and data[i]['close'] > last_buy*1.02):
+                    budget = budget + data[i]['close'];
+                    last_trade = "sell"
+                    trade_count += 1
+                if (last_trade == "sell" and data[i]['close']*1.015 < last_buy):
+                    budget = budget - data[i]['close'];
+                    last_buy = data[i]['close']
+                    last_trade = "buy"
+                    trade_count += 1
 
-            total_tests = len(signals)
-            accuracy = (true_positives + false_negatives) / total_tests
-            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) != 0 else 0
-            recall = true_positives / (true_positives + false_negatives)
-            buy_sell_accuracy = (true_positives + false_negatives - hold_count) / (total_tests - hold_count) if (total_tests - hold_count) != 0 else 0
-            number_of_buy_sell = total_tests - hold_count;
+                if i < len(data) - 1:
+                    if signal == 'buy':
+                        if data[i + 1]['close'] > data[i]['close']:
+                            correct += 1
+                        else:
+                            incorrect += 1
+                        if last_trade == "sell": 
+                            budget -= data[i]['close'];
+                            last_trade = "buy"
+                    elif signal == "sell":
+                        if  data[i + 1]['close'] < data[i]['close']:
+                            correct += 1
+                        else:
+                            incorrect += 1
+                        if last_trade == "buy": 
+                            budget += data[i]['close'];
+                            last_trade = "sell"
+
+            number_of_buy_sell = correct + incorrect
+            if (number_of_buy_sell > 0):
+                accuracy_of_buy_sell = correct / (correct + incorrect)
+            else:
+                accuracy_of_buy_sell = 0
 
             return {
-                'number_of_tests': total_tests,
-                'accuracy': accuracy,
-                'precision': precision,
-                'recall': recall,
                 'number_of_buy_sell': number_of_buy_sell,
-                'buy_sell_accuracy': buy_sell_accuracy
+                'accuracy_of_buy_sell': accuracy_of_buy_sell,
+                'number_of_mock_trade': trade_count,
+                'start_budget': 100000,
+                'final_budget': budget
             }
     
     # If the function isn't found, raise an exception

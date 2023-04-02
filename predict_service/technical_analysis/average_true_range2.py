@@ -1,4 +1,4 @@
-def average_true_range(market_data):
+def average_true_range2(market_data):
     # Extract the closing prices from the market data
     prices = [float(entry[4]) for entry in market_data]
     

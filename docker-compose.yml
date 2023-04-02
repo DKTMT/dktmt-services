@@ -103,6 +103,25 @@ services:
       - POSTGRES_PASSWORD=${PREDICT_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${PREDICT_SERVICE_DB_NAME}
 
+  celery:
+    build: ./task_handler_service
+    env_file:
+      - .env
+    command: celery -A task_handler_service worker --loglevel=INFO
+    depends_on:
+      - redis
+
+  celery-beat:
+    build: ./task_handler_service
+    env_file:
+      - .env
+    command: celery -A task_handler_service beat --loglevel=INFO
+    depends_on:
+      - redis
+  
+  redis:
+    image: redis
+
   adminer:
     image: adminer
     restart: always

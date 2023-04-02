@@ -4,7 +4,7 @@ import requests
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .predict import run_prediction, run_strategies_find, run_backtest
+from .predict import run_prediction, run_strategies_find, run_backtest_performance
 
 
 # Create your views here.
@@ -61,7 +61,7 @@ class BacktestView(APIView):
 
         results = {}
         for predictor in predictors:
-            result = run_backtest(predictor, market_data)
+            result = run_backtest_performance(predictor, market_data)
             results[predictor] = result
 
         response = Response()

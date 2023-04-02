@@ -12,7 +12,18 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     build-essential \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Download and install TA-Lib
+RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
+    tar -xzf ta-lib-0.4.0-src.tar.gz && \
+    cd ta-lib && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -r ta-lib ta-lib-0.4.0-src.tar.gz
 
 # Create a virtual environment and activate it
 RUN python3 -m venv /opt/venv

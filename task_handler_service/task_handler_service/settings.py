@@ -11,15 +11,12 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
-from dotenv import load_dotenv
 
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Load the environment variables from the .env file
-load_dotenv(os.path.join(BASE_DIR, '../.env'))
 
 # Load the variables from the environment variable
 APP_SECRET = os.environ.get("TASK_HANDLER_SERVICE_APP_SECRET")
@@ -61,6 +58,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_apscheduler",
+    "django_celery_results",
+    "django_celery_beat",
     "tasks",
 ]
 
@@ -150,3 +150,8 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_DB_TABLES = {'task': 'celery_taskmeta'}
+APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
