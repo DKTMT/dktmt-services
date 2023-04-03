@@ -2,7 +2,7 @@ import requests
 import json
 from django.http import HttpResponse, HttpResponseBadRequest
 
-from exchange_service.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST
+from predict_service.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST
 
 class OAuthValidationMiddleware:
     def __init__(self, get_response):

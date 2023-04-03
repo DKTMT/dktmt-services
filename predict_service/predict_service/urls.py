@@ -18,5 +18,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/predict/", include("predict_models.urls")),
+    path("api/predict/", include("predicts.urls")),
 ]

@@ -3,7 +3,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 @shared_task
 def run_scheduled_task(params):
-    print ("run_scheduled_task called")
     duration = params.get('duration', 3)
     counter = 0
     

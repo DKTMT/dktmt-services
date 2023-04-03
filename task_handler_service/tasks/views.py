@@ -15,8 +15,6 @@ exchange_service_url = "http://" + EXCHANGE_SERVICE_HOST + ":" + EXCHANGE_SERVIC
 class PredictView(APIView):
     def dispatch(self, request, *args, **kwargs):
         task_type = kwargs["task_type"]
-        print (task_type)
-
         if (task_type == "schedule"):
             if (request.method == "POST"):
                 params = {
