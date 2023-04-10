@@ -6,11 +6,89 @@ from rest_framework import status
 
 from django.shortcuts import get_object_or_404
 
-from predict_service.utils import hash
 from .predict import run_prediction, run_strategies_find, run_backtest_performance
 from .models import CustomStrategy
 from .serializers import CustomStrategySerializer
 
+def get_market_data(symbol, interval, exchange):
+    if exchange == "binance":
+        url = 'https://api.binance.com/api/v3/klines'
+        params = {
+            'symbol': symbol,
+            'interval': interval,
+            'limit': 400
+        }
+        response = requests.get(url, params=params)
+        return response.json()
+    elif exchange == "bitkub":
+        url = 'https://api.bitkub.com/api/market/candles'
+        params = {
+            'sym': symbol,
+            'intervals': interval,
+            'limit': 400
+        }
+        response = requests.get(url, params=params)
+        candles = response.json()['result']
+        return [[
+            candle['open_time'],
+            candle['open'],
+            candle['high'],
+            candle['low'],
+            candle['close'],
+            candle['volume'],
+            candle['close_time'],
+            candle['quote_asset_volume'],
+            candle['number_of_trades'],
+            candle['taker_buy_base_asset_volume'],
+            candle['taker_buy_quote_asset_volume'],
+            candle['ignore']
+        ] for candle in candles]
+    elif exchange == "forex":
+        url = 'https://forex.com/api/market/candles'
+        params = {
+            'symbol': symbol,
+            'interval': interval,
+            'limit': 400
+        }
+        response = requests.get(url, params=params)
+        candles = response.json()['result']
+        return [[
+            candle['openTime'],
+            candle['openPrice'],
+            candle['highPrice'],
+            candle['lowPrice'],
+            candle['closePrice'],
+            candle['volume'],
+            candle['closeTime'],
+            candle['quoteVolume'],
+            candle['numberOfTrades'],
+            candle['takerBuyBaseAssetVolume'],
+            candle['takerBuyQuoteAssetVolume']
+        ] for candle in candles]
+    elif exchange == "stock":
+        url = 'https://api.stock.com/api/market/candles'
+        params = {
+            'symbol': symbol,
+            'interval': interval,
+            'limit': 400
+        }
+        response = requests.get(url, params=params)
+        candles = response.json()['result']
+        return [[
+            candle['openTime'],
+            candle['openPrice'],
+            candle['highPrice'],
+            candle['lowPrice'],
+            candle['closePrice'],
+            candle['volume'],
+            candle['closeTime'],
+            candle['quoteVolume'],
+            candle['numberOfTrades'],
+            candle['takerBuyBaseAssetVolume'],
+            candle['takerBuyQuoteAssetVolume']
+        ] for candle in candles]
+    else:
+        return None
 
 # Create your views here.
 class StrategyView(APIView):
@@ -28,18 +106,20 @@ class PredictView(APIView):
         exchange = request.data['exchange']
         predictors = request.data['strategies']
 
-        url = 'https://api.binance.com/api/v3/klines'
-        params = {
-            'symbol': symbol,
-            'interval': interval,
-            'limit': 200
-        }
-        response = requests.get(url, params=params)
-        market_data = response.json()
-
+        market_data = get_market_data(symbol, interval, exchange)
+        base_strategies = run_strategies_find()
         results = {}
         for predictor in predictors:
-            result = run_prediction(predictor, market_data)
+            # check predictor
+            if predictor in base_strategies:
+                result = run_prediction(predictor, market_data)
+            else:
+                # find in db
+                custom_strategy = get_object_or_404(CustomStrategy, name=predictor)
+                custom_strategy_result = []
+                for strategy in custom_strategy:
+                    custom_strategy_result.push(run_prediction(strategy, market_data))
+
             results[predictor] = result
 
         response = Response()
@@ -55,14 +135,7 @@ class BacktestView(APIView):
         exchange = request.data['exchange']
         predictors = request.data['strategies']
 
-        url = 'https://api.binance.com/api/v3/klines'
-        params = {
-            'symbol': symbol,
-            'interval': interval,
-            'limit': 400
-        }
-        response = requests.get(url, params=params)
-        market_data = response.json()
+        market_data = get_market_data(symbol, interval, exchange)
 
         results = {}
         for predictor in predictors:
@@ -77,46 +150,49 @@ class BacktestView(APIView):
 
 class CustomStrategyView(APIView):
     def get(self, request):
-        email = request.user_data['email']
-        hashed_email = hash(email)
-        custom_strategies = CustomStrategy.objects.filter(hashed_email=hashed_email)
-        data = [{'id': strategy.id, 'strategies': strategy.strategies, 'method': strategy.method, 'public': strategy.public, 'created_at': strategy.created_at, 'updated_at': strategy.updated_at} for strategy in custom_strategies]
-        return Response(data)
+        user_name = request.user_data["name"]
+        strategies = CustomStrategy.objects.filter(
+            created_by=user_name) | CustomStrategy.objects.filter(public=True)
+        serializer = CustomStrategySerializer(strategies, many=True)
+        
+        for strategy in serializer.data:
+            if strategy['anonymous'] and strategy['created_by'] != user_name:
+                strategy['created_by'] = "anonymous"
+
+        return Response(serializer.data)
 
     def post(self, request):
-        email = request.user_data['email']
-        hashed_email = hash(email)
-        strategies = request.data['strategies']
-        method = request.data['method']
-        public = request.data['public']
-        custom_strategy = CustomStrategy(hashed_email=hashed_email, strategies=strategies, method=method, public=public)
-        custom_strategy.save()
-        data = {'id': custom_strategy.id, 'strategies': custom_strategy.strategies, 'method': custom_strategy.method, 'public': custom_strategy.public, 'created_at': custom_strategy.created_at, 'updated_at': custom_strategy.updated_at}
-        return Response(data, status=status.HTTP_201_CREATED)
+        data = request.data
+        data['created_by'] = request.user_data["name"]
+        serializer = CustomStrategySerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def put(self, request, pk):
-        email = request.user_data['email']
-        hashed_email = hash(email)
+    def put(self, request):
         try:
-            custom_strategy = CustomStrategy.objects.get(id=pk, hashed_email=hashed_email)
+            strategy = CustomStrategy.objects.get(pk=request.data["id"])
         except CustomStrategy.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        strategies = request.data.get('strategies', custom_strategy.strategies)
-        method = request.data.get('method', custom_strategy.method)
-        public = request.data.get('public', custom_strategy.public)
-        custom_strategy.strategies = strategies
-        custom_strategy.method = method
-        custom_strategy.public = public
-        custom_strategy.save()
-        data = {'id': custom_strategy.id, 'strategies': custom_strategy.strategies, 'method': custom_strategy.method, 'public': custom_strategy.public, 'created_at': custom_strategy.created_at, 'updated_at': custom_strategy.updated_at}
-        return Response(data)
 
-    def delete(self, request, pk):
-        email = request.user_data['email']
-        hashed_email = hash(email)
+        if strategy.created_by != request.user_data["name"]:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        serializer = CustomStrategySerializer(strategy, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, strategy_id):
         try:
-            custom_strategy = CustomStrategy.objects.get(id=pk, hashed_email=hashed_email)
+            strategy = CustomStrategy.objects.get(pk=strategy_id)
         except CustomStrategy.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        custom_strategy.delete()
+
+        if strategy.created_by != request.user_data["name"]:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        strategy.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
