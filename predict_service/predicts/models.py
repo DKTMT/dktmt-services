@@ -2,7 +2,6 @@ from django.db import models
 
 class CustomStrategy(models.Model):
     name = models.CharField(max_length=255)
-    strategies = models.JSONField(default=list)
     method = models.JSONField()
     public = models.BooleanField()
     anonymous = models.BooleanField()
