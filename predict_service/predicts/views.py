@@ -99,42 +99,56 @@ class StrategyView(APIView):
         }
         return response
     
+def get_custom_strategy_result(method, market_data):
+    if (method["name"] == "chain"):
+        order = method["order"]
+        previous_result = run_prediction(order[0], market_data)
+        
+        for strategy in order:
+            predict_result = run_prediction(strategy, market_data)
+            if (predict_result != previous_result):
+                return "hold"
+            else:
+                previous_result = predict_result
+        return previous_result
+    
+    # poll 
+    elif (method["name"]== "poll"):
+        poll = method["poll"]
+        result_poll = {
+            "buy": 0,
+            "sell": 0,
+            "hold": 0
+        }
+        for strategy, vote in poll.items():
+            predict_result = run_prediction(strategy, market_data)
+            result_poll[predict_result] += vote
+
+        return  max(result_poll, key=result_poll.get)
+    
 class PredictView(APIView):
     def post(self, request):
-        symbol = request.data['symbol']
-        interval = request.data['timeframe']
-        exchange = request.data['exchange']
-        predictors = request.data['strategies']
+        symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
 
         market_data = get_market_data(symbol, interval, exchange)
         base_strategies = run_strategies_find()
         results = {}
+
         for predictor in predictors:
-            # check predictor
             if predictor in base_strategies:
                 result = run_prediction(predictor, market_data)
             else:
-                # find in db
                 custom_strategy = get_object_or_404(CustomStrategy, name=predictor)
-                custom_strategy_result = []
-                for strategy in custom_strategy:
-                    custom_strategy_result.push(run_prediction(strategy, market_data))
+                method = custom_strategy.method
+                result = get_custom_strategy_result(method, market_data)
 
             results[predictor] = result
 
-        response = Response()
-        response.data = {
-            'results': results
-        }
-        return response
+        return Response({'results': results})
     
 class BacktestView(APIView):
     def post(self, request):
-        symbol = request.data['symbol']
-        interval = request.data['timeframe']
-        exchange = request.data['exchange']
-        predictors = request.data['strategies']
-
+        symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
         market_data = get_market_data(symbol, interval, exchange)
 
         results = {}
@@ -142,11 +156,7 @@ class BacktestView(APIView):
             result = run_backtest_performance(predictor, market_data)
             results[predictor] = result
 
-        response = Response()
-        response.data = {
-            'results': results
-        }
-        return response
+        return Response({'results': results})
 
 class CustomStrategyView(APIView):
     def get(self, request):
