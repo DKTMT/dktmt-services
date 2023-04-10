@@ -12,6 +12,8 @@ from binance_api.services import BinanceService
 from binance_api.serializers import UserAPISerializer
 from exchange_service.utils import hash, encrypt, decrypt
 
+import requests
+
 
 class UserAPIView(APIView):
     # Retrieve UserAPI object by hashing the email and searching for it in the database
@@ -97,7 +99,21 @@ class PortView(APIView):
         binance_api = BinanceService(decrypt(user.encrypted_api_key),
                                      decrypt(user.encrypted_api_secret))
         port_data = binance_api.fetch_assets({})
-    
+
+        # Fetch icons using the Coingecko API
+        icon_api = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
+        try:
+            response = requests.get(icon_api)
+            response.raise_for_status()
+            icons_data = response.json()
+            icons_map = {coin["symbol"].upper(): coin["image"] for coin in icons_data}
+        except requests.exceptions.RequestException as e:
+            icons_map = {}
+
+        for coin in port_data["coins_possess"]:
+            asset = coin["asset"]
+            coin["icon"] = icons_map.get(asset, "")
+
         return Response({
             "coins_possess": port_data["coins_possess"],
             "port_value":  port_data["port_value"]
