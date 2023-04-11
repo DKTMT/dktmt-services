@@ -120,9 +120,11 @@ def get_custom_strategy_result(method, market_data):
             "sell": 0,
             "hold": 0
         }
-        for strategy, vote in poll.items():
-            predict_result = run_prediction(strategy, market_data)
-            result_poll[predict_result] += vote
+        for strategy in poll:
+            strategy_name = strategy["strategy"]
+            strategy_vote = strategy["vote"]
+            predict_result = run_prediction(strategy_name, market_data)
+            result_poll[predict_result] += strategy_vote
 
         return  max(result_poll, key=result_poll.get)
     
