@@ -33,8 +33,8 @@ TASK_HANDLER_SERVICE_HOST = os.environ.get("TASK_HANDLER_SERVICE_HOST")
 TASK_HANDLER_SERVICE_PORT = os.environ.get("TASK_HANDLER_SERVICE_PORT")
 PREDICT_SERVICE_HOST = os.environ.get("PREDICT_SERVICE_HOST")
 PREDICT_SERVICE_PORT = os.environ.get("PREDICT_SERVICE_PORT")
-NOTI_SERVICE_HOST = os.environ.get("NOTI_SERVICE_HOST")
-NOTI_SERVICE_PORT = os.environ.get("NOTI_SERVICE_PORT")
+NOTIFY_SERVICE_HOST = os.environ.get("NOTIFY_SERVICE_HOST")
+NOTIFY_SERVICE_PORT = os.environ.get("NOTIFY_SERVICE_PORT")
 
 
 # Quick-start development settings - unsuitable for production

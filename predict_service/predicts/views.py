@@ -190,14 +190,13 @@ class CustomStrategyView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, strategy_id):
+    def delete(self, request):
+        strategy_name = request.data["strategy"]
+        username = request.user_data["name"]
         try:
-            strategy = CustomStrategy.objects.get(pk=strategy_id)
+            strategy = CustomStrategy.objects.get(name=strategy_name, created_by=username)
         except CustomStrategy.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-
-        if strategy.created_by != request.user_data["name"]:
-            return Response(status=status.HTTP_403_FORBIDDEN)
 
         strategy.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

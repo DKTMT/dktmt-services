@@ -32,8 +32,8 @@ HOSTS = os.environ.get("EXCHANGE_SERVICE_ALLOWED_HOSTS").split(' ')
 
 AUTH_SERVICE_HOST = os.environ.get("AUTH_SERVICE_HOST")
 AUTH_SERVICE_PORT = os.environ.get("AUTH_SERVICE_PORT")
-ENCRYPTION_KEY = os.environ.get("EXCHANGE_SERVICE_ENCRYPTION_KEY")
-PUBLIC_KEY = os.environ.get("EXCHANGE_SERVICE_PUBLIC_KEY")
+ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
+PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 
 
 # Quick-start development settings - unsuitable for production
