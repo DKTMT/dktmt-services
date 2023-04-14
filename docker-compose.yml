@@ -17,7 +17,7 @@ services:
     command: >
       sh -c "python manage.py makemigrations &&
              python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py runserver 0.0.0.0:8001"
     env_file:
       - .env
     environment:
@@ -32,7 +32,7 @@ services:
     command: >
       sh -c "python manage.py makemigrations &&
              python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py runserver 0.0.0.0:8002"
     env_file:
       - .env
     environment:
@@ -46,7 +46,7 @@ services:
     command: >
       sh -c "python manage.py makemigrations &&
              python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py runserver 0.0.0.0:8003"
     env_file:
       - .env
     environment:
@@ -60,7 +60,7 @@ services:
     command: >
       sh -c "python manage.py makemigrations &&
              python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py runserver 0.0.0.0:8004"
     env_file:
       - .env
     environment:
@@ -68,6 +68,20 @@ services:
     restart: on-failure
     depends_on: 
       - predict_service_db
+
+  notify_service:
+    build: ./notify_service
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8005"
+    env_file:
+      - .env
+    environment:
+      - ./notify_service/notify_service/settings.py
+    restart: on-failure
+    depends_on: 
+      - notify_service_db
 
   auth_service_db:
     image: postgres:latest
@@ -102,6 +116,15 @@ services:
       - POSTGRES_USER=${PREDICT_SERVICE_DB_USERNAME}
       - POSTGRES_PASSWORD=${PREDICT_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${PREDICT_SERVICE_DB_NAME}
+
+  notify_service_db:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${NOTIFY_SERVICE_DB_USERNAME}
+      - POSTGRES_PASSWORD=${NOTIFY_SERVICE_DB_PASSWORD}
+      - POSTGRES_DB=${NOTIFY_SERVICE_DB_NAME}
 
   celery:
     build: ./task_handler_service

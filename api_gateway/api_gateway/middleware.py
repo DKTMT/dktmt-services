@@ -16,10 +16,13 @@ class ReverseProxyMiddleware:
             elif request.path.startswith('/api/exchange'):
                 microservice_url = "http://" + EXCHANGE_SERVICE_HOST + ":" + EXCHANGE_SERVICE_PORT + request.path
             # task handler service
+            elif request.path.startswith('/api/predict'):
+                microservice_url = "http://" + PREDICT_SERVICE_HOST + ":" + PREDICT_SERVICE_PORT + request.path
+            # task handler service
             elif request.path.startswith('/api/task'):
                 microservice_url = "http://" + TASK_HANDLER_SERVICE_HOST + ":" + TASK_HANDLER_SERVICE_PORT + request.path
             # notification service
-            elif request.path.startswith('/api/noti'):
+            elif request.path.startswith('/api/notify'):
                 microservice_url = "http://" + NOTIFY_SERVICE_HOST + ":" + NOTIFY_SERVICE_PORT + request.path
             else:
                 return HttpResponseBadRequest('Bad request')

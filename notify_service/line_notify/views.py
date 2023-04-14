@@ -1,51 +1,77 @@
-from django.shortcuts import render, redirect
+import hmac
+import hashlib
+
+from django.http import JsonResponse, HttpResponseRedirect
+
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-import requests
-import qrcode
-import base64
-from io import BytesIO
 
-from notify_service.settings import (
-    LINE_NOTIFY_CLIENT_ID,
-    LINE_NOTIFY_CLIENT_SECRET,
-    LINE_NOTIFY_REDIRECT_URI,
-)
-
+from notify_service.settings import ENCRYPTION_KEY, LINE_NOTIFY_CLIENT_ID, LINE_NOTIFY_CLIENT_SECRET, LINE_NOTIFY_REDIRECT_URI
+from .line_notify import LineNotify
 from .models import AccessToken
 
-class GenerateQRCodeView(APIView):
-    def get(self, request):
-        state = "your_state"
-        scope = "notify"
-        auth_url = f"https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id={LINE_NOTIFY_CLIENT_ID}&redirect_uri={LINE_NOTIFY_REDIRECT_URI}&state={state}&scope={scope}"
-        img = qrcode.make(auth_url)
-        buffered = BytesIO()
-        img.save(buffered, format="PNG")
-        img_str = base64.b64encode(buffered.getvalue()).decode()
-        return Response({"qrcode": img_str})
+def hash(data):
+    """Hash the data using hmac"""
+    return hmac.new(bytes(ENCRYPTION_KEY, 'utf-8'),
+                    bytes(data, 'utf-8'),
+                    digestmod=hashlib.sha256).hexdigest()
+
+class GenerateAuthorizationURLView(APIView):
+    def get(self, request, *args, **kwargs):
+        email = request.user_data["email"]
+        auth_url = LineNotify.generate_authorization_url(email)
+        return JsonResponse({"auth_url": auth_url})
+
 
 class CallbackView(APIView):
-    def get(self, request):
-        code = request.GET.get("code")
+    def post(self, request):
+        code = request.POST.get("code")
+        email = request.POST.get("state")
+        if code is None or email is None:
+            return JsonResponse({"error": "Invalid request."})
 
-        if code:
-            data = {
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": LINE_NOTIFY_REDIRECT_URI,
-                "client_id": LINE_NOTIFY_CLIENT_ID,
-                "client_secret": LINE_NOTIFY_CLIENT_SECRET,
-            }
-            response = requests.post("https://api.line.me/oauth2/v2.1/token", data=data)
+        line_notify = LineNotify(
+            client_id=LINE_NOTIFY_CLIENT_ID,
+            client_secret=LINE_NOTIFY_CLIENT_SECRET,
+            redirect_uri=LINE_NOTIFY_REDIRECT_URI,
+        )
 
-            if response.status_code == 200:
-                access_token = response.json()['access_token']
-                email = request.user_data["email"]
-                AccessToken.save_access_token(email, access_token)
-                return Response({"detail": "Access token saved successfully."}, status=status.HTTP_200_OK)
-            else:
-                return Response({"detail": "Error occurred while fetching access token."}, status=status.HTTP_400_BAD_REQUEST)
+        access_token = line_notify.get_access_token(code)
+
+        if access_token:
+            self.save_access_token_to_user(email, access_token)
+            welcome_message = (
+                "Welcome to DKTMT! We are excited to have you join our community and "
+                "look forward to providing you with real-time trading predictions and "
+                "notifications to help you make informed investment decisions."
+            )
+            LineNotify.send_message(access_token, welcome_message)
+            return HttpResponseRedirect("line://")  # Redirect to LINE app
         else:
-            return Response({"detail": "Code not found in the request."}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({"error": "Failed to get access token."})
+
+    def save_access_token_to_user(self, email, access_token):
+        hashed_email = hash(email)
+        AccessToken.objects.update_or_create(
+            hashed_email=hashed_email, defaults={"access_token": access_token}
+        )
+
+class SendMessageView(APIView):
+    def post(self, request):
+        email = request.user_data["email"]
+        hashed_email = AccessToken.hash_email(email)
+
+        try:
+            access_token_obj = AccessToken.objects.get(hashed_email=hashed_email)
+        except AccessToken.DoesNotExist:
+            return JsonResponse({"error": "Access token not found."})
+
+        message = request.data.get("message")
+
+        if not message:
+            return JsonResponse({"error": "Message is required."})
+
+        try:
+            LineNotify.send_message(access_token_obj.access_token, message)
+            return JsonResponse({"status": "success"})
+        except Exception as e:
+            return JsonResponse({"error": str(e)})
