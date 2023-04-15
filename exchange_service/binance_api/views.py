@@ -1,19 +1,19 @@
-from orders.models import Order
-from orders.serializers import OrderSerializer
+import requests
+from datetime import datetime, timedelta
 
-from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
+from rest_framework import status
+
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 
-from binance_api.models import UserAPI
-from binance_api.services import BinanceService
-from binance_api.serializers import UserAPISerializer
-from exchange_service.utils import hash, encrypt, decrypt
+from exchange_service.utils import encrypt, decrypt
 
-import requests
-
+from .models import UserAPI, Order
+from .serializers import UserAPISerializer, OrderSerializer
+from .services import BinanceService
 
 class UserAPIView(APIView):
     # Retrieve UserAPI object by hashing the email and searching for it in the database
@@ -47,8 +47,8 @@ class UserAPIView(APIView):
 
         email = request.user_data["email"]
         user = self.get_object(email)
-        user.api_key = serializer.validated_data['api_key']
-        user.api_secret = serializer.validated_data['api_secret']
+        user.api_key = encrypt(serializer.data['api_key']),
+        user.api_secret = encrypt(serializer.data['api_secret'])
         user.save()
 
         response_data = {
@@ -67,7 +67,7 @@ class UserAPIView(APIView):
             'message': f"API of email: {email} deleted"
         }
         return Response(response_data)
-    
+
 class UserAPIValidateView(APIView):
     def get(self, request):
         email = request.user_data["email"]
@@ -121,36 +121,83 @@ class PortView(APIView):
 
 
 class OrderView(APIView):
-    def get(self, request):
-        orders = Order.objects.filter(exchange='binance')
-        serializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data)
-    
+    @transaction.atomic
     def post(self, request):
         serializer = OrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         email = request.user_data["email"]
-        hashed_email =  hash(email)
+        hashed_email = hash(email)
 
         try:
             user = UserAPI.objects.get(hashed_email=hashed_email)
         except UserAPI.DoesNotExist:
             raise AuthenticationFailed('User not found!')
+
         binance_api = BinanceService(decrypt(user.encrypted_api_key),
                                      decrypt(user.encrypted_api_secret))
+
+        # Create the order using the Binance API
         binance_api.create_order(
             symbol=serializer.validated_data['symbol'],
             side=serializer.validated_data['side'],
             quantity=serializer.validated_data['quantity'],
             price=serializer.validated_data['price'],
         )
-        
-        order_data = request.data
+
+        # Save the order to the database
+        order_data = serializer.validated_data
         order_data['hashed_email'] = hashed_email
         order_data['exchange'] = 'binance'
-
         order = Order.objects.create(**order_data)
         order_data['order_id'] = order.order_id
 
-        return Response(order_data)
+        # Serialize the created order object
+        serialized_order = OrderSerializer(order)
+
+        return Response(serialized_order.data)
+
+    def get(self, request):
+        email = request.user_data["email"]
+        hashed_email = hash(email)
+        orders = Order.objects.filter(exchange='binance', hashed_email=hashed_email)
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+class PortHistoryView(APIView):
+    def get(self, request):
+        email = request.user_data["email"]
+        hashed_email = hash(email)
+        range_days = request.data.get('range')
+
+        # Validate range_days value
+        if range_days is None:
+            raise ValidationError('Range value is required')
+        try:
+            range_days = int(range_days)
+            if range_days < 7 or range_days > 30:
+                raise ValueError
+        except ValueError:
+            raise ValidationError('Range value must be between 7 and 30')
+
+        try:
+            user = UserAPI.objects.get(hashed_email=hashed_email)
+        except UserAPI.DoesNotExist:
+            raise AuthenticationFailed('User not found!')
+
+        binance_api = BinanceService(decrypt(user.encrypted_api_key),
+                                     decrypt(user.encrypted_api_secret))
+
+        # Fetch historical portfolio data from the Binance API
+        end_time = int(datetime.now().timestamp() * 1000)
+        start_time = end_time - (86400 * range_days * 1000)
+        port_history = binance_api.fetch_port_history(start_time, end_time)
+        processed_snapshots = binance_api.process_snapshots(port_history)
+
+        result = {
+            "code": 200,
+            "msg": "",
+            "snapshotVos": processed_snapshots
+        }
+
+        return Response(result)

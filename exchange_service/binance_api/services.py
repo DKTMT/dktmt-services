@@ -3,7 +3,6 @@ import hmac
 import hashlib
 import time
 import requests
-import json
 
 
 class AuthenticationFailed(Exception):
@@ -105,50 +104,122 @@ class BinanceService():
                 port["coins_possess"].append(data)
                 port["port_value"] = port["port_value"] + free_value + locked_value
         return port
-
-    def fetch_orders(self):
-        # Define the endpoint and parameters
-        endpoint = f'{self.base_url}/api/v3/allOrders'
-        timestamp = int(time.time() * 1000)
-        params = {'timestamp': timestamp}
-        headers = {'X-MBX-APIKEY': self.api_key}
-
-        # Generate the signature
-        signature_data = urllib.parse.urlencode(params)
-        signature_data = signature_data.encode('utf-8')
-        signature = self.get_binance_signature(self.api_secret, signature_data)
-
-        # Add the signature to the request parameters
-        params['signature'] = signature
-
-        # Send the request and return the response
-        response = requests.get(endpoint, params=params, headers=headers)
-        return response.json()
-
-    def create_order(self, symbol, side, quantity, price):
-        # Define the endpoint and parameters
-        endpoint = f'{self.base_url}/api/v3/order'
-        timestamp = int(time.time() * 1000)
+    
+    def fetch_port_history(self, start_time, end_time):
+        path = '/sapi/v1/accountSnapshot'
         params = {
+            'type': 'SPOT',
+            'startTime': start_time,
+            'endTime': end_time,
+            'limit': 30,
+            'recvWindow': 5000,
+            'timestamp': int(time.time() * 1000)
+        }
+
+        query_string = '&'.join(["{}={}".format(k, v) for k, v in params.items()])
+        signature = hmac.new(self.api_secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+
+        query_string += '&signature=' + signature
+
+        base_url = 'https://api.binance.com'
+        url = base_url + path + '?' + query_string
+        header = {
+            'X-MBX-APIKEY': self.api_key
+        }
+
+        response = requests.get(url, headers=header)
+
+        if response.status_code != 200:
+            raise Exception(f"Error fetching portfolio history: {response.text}")
+
+        json_response = response.json()
+        return json_response['snapshotVos']
+    
+    def fetch_exchange_rates(self, assets):
+        exchange_rates = {}
+
+        for asset in assets:
+            if asset == 'USDT':
+                exchange_rates[asset] = 1
+                continue
+
+            symbol = f'{asset}USDT'
+            path = '/api/v3/ticker/price'
+            url = f'https://api.binance.com{path}?symbol={symbol}'
+
+            response = requests.get(url)
+            if response.status_code != 200:
+                print(f"Error fetching exchange rate for {symbol}: {response.text}")
+                continue
+
+            rate = response.json()
+            exchange_rates[asset] = float(rate['price'])
+
+        return exchange_rates
+    
+    def create_order(self, symbol, side, quantity, price):
+        timestamp = int(time.time() * 1000)
+        endpoint = f'{self.base_url}/order'
+
+        # Prepare the request payload
+        payload = {
             'symbol': symbol,
             'side': side,
+            'type': 'LIMIT',
+            'timeInForce': 'GTC',
             'quantity': quantity,
-            'type': 'MARKET',
-            'timestamp': timestamp,
+            'price': price,
             'recvWindow': 5000,
+            'timestamp': timestamp,
         }
-        if price is not None:
-            params['price'] = price
-        headers = {'X-MBX-APIKEY': self.api_key}
 
         # Generate the signature
-        signature_data = urllib.parse.urlencode(params)
-        signature_data = signature_data.encode('utf-8')
-        signature = self.get_binance_signature(self.api_secret, signature_data)
+        query_string = '&'.join(f'{k}={v}' for k, v in payload.items())
+        signature = hmac.new(
+            bytes(self.api_secret.encode('utf-8')),
+            bytes(query_string.encode('utf-8')),
+            hashlib.sha256
+        ).hexdigest()
 
-        # Add the signature to the request parameters
-        params['signature'] = signature
+        # Add the signature to the request payload
+        payload['signature'] = signature
 
-        # Send the request and return the response
-        response = requests.post(endpoint, params=params, headers=headers)
+        # Send the request to the Binance API
+        headers = {'X-MBX-APIKEY': self.api_key}
+        response = requests.post(
+            endpoint,
+            headers=headers,
+            params=payload
+        )
+
+        response.raise_for_status()
+
         return response.json()
+
+    def process_snapshots(self, snapshots):
+        unique_assets = set()
+        for snapshot in snapshots:
+            for balance in snapshot['data']['balances']:
+                unique_assets.add(balance['asset'])
+
+        exchange_rates = self.fetch_exchange_rates(unique_assets)
+
+        processed_snapshots = []
+
+        for snapshot in snapshots:
+            data = snapshot['data']
+            balances = data['balances']
+
+            total_value_usdt = 0
+            for balance in balances:
+                asset = balance['asset']
+                if asset in exchange_rates:
+                    total_value_usdt += (float(balance['free']) + float(balance['locked'])) * exchange_rates[asset]
+
+            processed_snapshots.append({
+                'type': snapshot['type'],
+                'updateTime': snapshot['updateTime'],
+                'value': total_value_usdt
+            })
+
+        return processed_snapshots

@@ -25,3 +25,14 @@ class UserAPI(models.Model):
     def api_secret(self):
         """Return the decrypted API secret"""
         return decrypt(self.encrypted_api_secret)
+
+class Order(models.Model):
+    order_id = models.AutoField(primary_key=True)
+    hashed_email = models.CharField(max_length=255)
+    exchange = models.CharField(max_length=255)
+    symbol = models.CharField(max_length=255)
+    side = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=20, decimal_places=8)
+    price = models.DecimalField(max_digits=20, decimal_places=8)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
