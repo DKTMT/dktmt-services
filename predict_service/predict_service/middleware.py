@@ -2,15 +2,15 @@ import requests
 import json
 from django.http import HttpResponse, HttpResponseBadRequest
 
-from predict_service.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST
+from predict_service.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST, TASK_HANDLER_SERVICE_HOST, TASK_HANDLER_SERVICE_PORT
 
 class OAuthValidationMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        print ("predict_service middleware called")
-        if request.headers.get('X-Task-Handler', None) == 'True':
+        print (request.headers.get("HOST"))
+        if request.headers.get("HOST") == f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}':
             try:
                 request.user_data = json.loads(request.body).get("user_data", {})
             except json.JSONDecodeError:

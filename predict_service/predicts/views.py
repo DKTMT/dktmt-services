@@ -98,35 +98,6 @@ class StrategyView(APIView):
         }
         return response
     
-def get_custom_strategy_result(method, market_data):
-    if (method["name"] == "chain"):
-        order = method["strategies"]
-        previous_result = run_prediction(order[0], market_data)
-        
-        for strategy in order:
-            predict_result = run_prediction(strategy, market_data)
-            if (predict_result != previous_result):
-                return "hold"
-            else:
-                previous_result = predict_result
-        return previous_result
-    
-    # poll 
-    elif (method["name"]== "poll"):
-        poll = method["strategies"]
-        result_poll = {
-            "buy": 0,
-            "sell": 0,
-            "hold": 0
-        }
-        for strategy in poll:
-            strategy_name = strategy["strategy"]
-            strategy_vote = strategy["vote"]
-            predict_result = run_prediction(strategy_name, market_data)
-            result_poll[predict_result] += strategy_vote
-
-        return  max(result_poll, key=result_poll.get)
-    
 class PredictView(APIView):
     def post(self, request):
         symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])

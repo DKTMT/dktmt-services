@@ -1,7 +1,7 @@
 version: '3.3'
 
 services:
-  api_gateway:
+  api-gateway:
     build: ./api_gateway
     command: >
       sh -c "python manage.py runserver 0.0.0.0:8000"
@@ -12,7 +12,7 @@ services:
     ports:
       - "8000:8000"
 
-  auth_service:
+  auth-service:
     build: ./auth_service
     command: >
       sh -c "python manage.py makemigrations &&
@@ -24,9 +24,9 @@ services:
       - ./auth_service/auth_service/settings.py
     restart: on-failure
     depends_on: 
-      - auth_service_db
+      - auth-service-db
 
-  exchange_service:
+  exchange-service:
     build: ./exchange_service
     user: root
     command: >
@@ -39,9 +39,9 @@ services:
       - ./exchange_service/exchange_service/settings.py
     restart: on-failure
     depends_on: 
-      - exchange_service_db
+      - exchange-service-db
 
-  task_handler_service:
+  task-handler-service:
     build: ./task_handler_service
     command: >
       sh -c "python manage.py makemigrations &&
@@ -53,9 +53,9 @@ services:
       - ./task_handler_service/task_handler_service/settings.py
     restart: on-failure
     depends_on: 
-      - task_handler_service_db
+      - task-handler-service-db
 
-  predict_service:
+  predict-service:
     build: ./predict_service
     command: >
       sh -c "python manage.py makemigrations &&
@@ -67,9 +67,9 @@ services:
       - ./predict_service/predict_service/settings.py
     restart: on-failure
     depends_on: 
-      - predict_service_db
+      - predict-service-db
 
-  notify_service:
+  notify-service:
     build: ./notify_service
     command: >
       sh -c "python manage.py makemigrations &&
@@ -81,16 +81,16 @@ services:
       - ./notify_service/notify_service/settings.py
     restart: on-failure
     depends_on: 
-      - notify_service_db
+      - notify-service-db
 
-  auth_service_db:
+  auth-service-db:
     image: postgres:latest
     environment:
       - POSTGRES_USER=${AUTH_SERVICE_DB_USERNAME}
       - POSTGRES_PASSWORD=${AUTH_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${AUTH_SERVICE_DB_NAME}
 
-  exchange_service_db:
+  exchange-service-db:
     image: postgres:latest
     env_file:
       - .env
@@ -99,7 +99,7 @@ services:
       - POSTGRES_PASSWORD=${EXCHANGE_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${EXCHANGE_SERVICE_DB_NAME}
 
-  task_handler_service_db:
+  task-handler-service-db:
     image: postgres:latest
     env_file:
       - .env
@@ -108,7 +108,7 @@ services:
       - POSTGRES_PASSWORD=${TASK_HANDLER_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${TASK_HANDLER_SERVICE_DB_NAME}
 
-  predict_service_db:
+  predict-service-db:
     image: postgres:latest
     env_file:
       - .env
@@ -117,7 +117,7 @@ services:
       - POSTGRES_PASSWORD=${PREDICT_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${PREDICT_SERVICE_DB_NAME}
 
-  notify_service_db:
+  notify-service-db:
     image: postgres:latest
     env_file:
       - .env
@@ -149,7 +149,10 @@ services:
     image: adminer
     restart: always
     depends_on: 
-      - auth_service_db
-      - exchange_service_db
+      - auth-service-db
+      - exchange-service-db
+      - task-handler-service-db
+      - predict-service-db
+      - notify-service-db
     ports:
       - "8080:8080" 

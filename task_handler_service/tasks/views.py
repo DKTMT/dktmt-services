@@ -47,8 +47,6 @@ class PredictView(APIView):
         request_headers = dict(request.headers)
         request_headers['X-Task-Handler'] = 'True'
 
-        print (request_headers)
-
         response = requests.request(
             method=request.method,
             url=url,
@@ -72,7 +70,9 @@ class SchedulePredictView(APIView):
         ticket = Ticket(created_by=hashed_email, status='open', **body)
         ticket.save()
 
-        task = schedule_prediction_task.apply_async(args=[ticket.id, request.user_data])
+        user_data = request.user_data
+
+        task = schedule_prediction_task.apply_async(args=[ticket.id, user_data])
         ticket.task_id = task.id
         ticket.save()
 

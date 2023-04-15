@@ -28,12 +28,16 @@ DB_PORT = os.environ.get("NOTIFY_SERVICE_DB_PORT")
 DB_NAME = os.environ.get("NOTIFY_SERVICE_DB_NAME")
 DB_USERNAME = os.environ.get("NOTIFY_SERVICE_DB_USERNAME")
 DB_PASSWORD = os.environ.get("NOTIFY_SERVICE_DB_PASSWORD")
+HOSTS = os.environ.get("NOTIFY_SERVICE_ALLOWED_HOSTS").split(' ')
 
 LINE_NOTIFY_CLIENT_ID = os.environ.get("LINE_NOTIFY_CLIENT_ID")
 LINE_NOTIFY_CLIENT_SECRET = os.environ.get("LINE_NOTIFY_CLIENT_SECRET")
 LINE_NOTIFY_REDIRECT_URI = os.environ.get("LINE_NOTIFY_REDIRECT_URI")
 AUTH_SERVICE_HOST = os.environ.get("AUTH_SERVICE_HOST")
 AUTH_SERVICE_PORT = os.environ.get("AUTH_SERVICE_PORT")
+TASK_HANDLER_SERVICE_HOST = os.environ.get("TASK_HANDLER_SERVICE_HOST")
+TASK_HANDLER_SERVICE_PORT = os.environ.get("TASK_HANDLER_SERVICE_PORT")
+
 ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
 
 # Quick-start development settings - unsuitable for production
@@ -45,7 +49,7 @@ SECRET_KEY = APP_SECRET
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = HOSTS
 
 
 # Application definition

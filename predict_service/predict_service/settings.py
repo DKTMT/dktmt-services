@@ -32,8 +32,12 @@ HOSTS = os.environ.get("PREDICT_SERVICE_ALLOWED_HOSTS").split(' ')
 
 AUTH_SERVICE_HOST = os.environ.get("AUTH_SERVICE_HOST")
 AUTH_SERVICE_PORT = os.environ.get("AUTH_SERVICE_PORT")
+TASK_HANDLER_SERVICE_HOST = os.environ.get("TASK_HANDLER_SERVICE_HOST")
+TASK_HANDLER_SERVICE_PORT = os.environ.get("TASK_HANDLER_SERVICE_PORT")
+
 ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
 PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -45,7 +49,7 @@ SECRET_KEY = APP_SECRET
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = HOSTS
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
