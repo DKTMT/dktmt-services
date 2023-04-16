@@ -80,8 +80,9 @@ def run_backtest_performance(predictor, market_data):
     last_buy = 0
     last_trade = "sell"
     trade_count = 0
+    data_length = len(market_data)
 
-    for i in range(200, 400):
+    for i in range(200, data_length):
         signal = run_prediction(predictor, market_data[i-200:i])
         # cutlost and out condition
         if (last_trade == "buy" and data[i]['close'] > last_buy*1.02):

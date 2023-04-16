@@ -6,16 +6,16 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .predict import run_prediction, run_strategies_find, run_backtest_performance
-from .models import CustomStrategy
+from .models import BacktestResult, CustomStrategy
 from .serializers import CustomStrategySerializer
 
-def get_market_data(symbol, interval, exchange):
+def get_market_data(symbol, interval, exchange, limit):
     if exchange == "binance":
         url = 'https://api.binance.com/api/v3/klines'
         params = {
             'symbol': symbol,
             'interval': interval,
-            'limit': 400
+            'limit': limit
         }
         response = requests.get(url, params=params)
         return response.json()
@@ -24,7 +24,7 @@ def get_market_data(symbol, interval, exchange):
         params = {
             'sym': symbol,
             'intervals': interval,
-            'limit': 400
+            'limit': limit
         }
         response = requests.get(url, params=params)
         candles = response.json()['result']
@@ -47,7 +47,7 @@ def get_market_data(symbol, interval, exchange):
         params = {
             'symbol': symbol,
             'interval': interval,
-            'limit': 400
+            'limit': limit
         }
         response = requests.get(url, params=params)
         candles = response.json()['result']
@@ -69,7 +69,7 @@ def get_market_data(symbol, interval, exchange):
         params = {
             'symbol': symbol,
             'interval': interval,
-            'limit': 400
+            'limit': limit
         }
         response = requests.get(url, params=params)
         candles = response.json()['result']
@@ -90,11 +90,31 @@ def get_market_data(symbol, interval, exchange):
         return None
 
 # Create your views here.
-class StrategyView(APIView):
+class BaseStrategyView(APIView):
     def get(self, request):
         response = Response()
         response.data = {
             'strategies':  run_strategies_find()
+        }
+        return response
+
+class StrategyView(APIView):
+    def get(self, request):
+        base_strategies = run_strategies_find()
+        user_name = request.user_data["name"]
+        strategies = CustomStrategy.objects.filter(
+            created_by=user_name) | CustomStrategy.objects.filter(public=True)
+        serializer = CustomStrategySerializer(strategies, many=True)
+        
+        for strategy in serializer.data:
+            if strategy['anonymous'] and strategy['created_by'] != user_name:
+                strategy['created_by'] = "anonymous"
+
+        custom_strategies = [f'{result["name"]} by {result["created_by"]}' for result in serializer.data]
+
+        response = Response()
+        response.data = {
+            'strategies':  base_strategies + custom_strategies
         }
         return response
     
@@ -102,7 +122,7 @@ class PredictView(APIView):
     def post(self, request):
         symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
 
-        market_data = get_market_data(symbol, interval, exchange)
+        market_data = get_market_data(symbol, interval, exchange, 200)
         results = {}
 
         for predictor in predictors:
@@ -112,14 +132,59 @@ class PredictView(APIView):
         return Response({'results': results})
     
 class BacktestView(APIView):
+    def get(self, request):
+        # Get all backtest results with a status of "ready" or "running"
+        backtest_results = BacktestResult.objects.filter(status__in=['ready', 'running'])
+        serialized_results = []
+
+        for result in backtest_results:
+            serialized_result = {
+                'name': result.name,
+                'status': result.status,
+                'last_update': result.last_update,
+                'number_of_buy_sell': result.number_of_buy_sell,
+                'accuracy_of_buy_sell': result.accuracy_of_buy_sell,
+                'number_of_mock_trade': result.number_of_mock_trade,
+                'start_budget': result.start_budget,
+                'final_budget': result.final_budget
+            }
+            serialized_results.append(serialized_result)
+
+        return Response(serialized_results, status=status.HTTP_200_OK)
+    
     def post(self, request):
         symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
-        market_data = get_market_data(symbol, interval, exchange)
+        market_data = get_market_data(symbol, interval, exchange, 400)
 
         results = {}
         for predictor in predictors:
-            result = run_backtest_performance(predictor, market_data)
-            results[predictor] = result
+            try:
+                result = BacktestResult.objects.get(name=predictor)
+            except BacktestResult.DoesNotExist:
+                # If no such result exists, create a new one
+                result = BacktestResult(name=predictor)
+            
+            result.status = 'running'
+            result.save()
+            
+             # Run the backtest and update the result fields
+            backtest_data = run_backtest_performance(predictor, market_data)
+            result.number_of_buy_sell = backtest_data['number_of_buy_sell']
+            result.accuracy_of_buy_sell = backtest_data['accuracy_of_buy_sell']
+            result.number_of_mock_trade = backtest_data['number_of_mock_trade']
+            result.start_budget = backtest_data['start_budget']
+            result.final_budget = backtest_data['final_budget']
+
+            # Save the updated result and return a success response
+            result.status = 'ready'
+            result.save()
+            results[predictor] = {
+                'number_of_buy_sell': result.number_of_buy_sell,
+                'accuracy_of_buy_sell': result.accuracy_of_buy_sell,
+                'number_of_mock_trade': result.number_of_mock_trade,
+                'start_budget' : result.start_budget,
+                'start_budget' : result.final_budget
+            }
 
         return Response({'results': results})
 
