@@ -44,7 +44,7 @@ NOTIFY_SERVICE_PORT = os.environ.get("NOTIFY_SERVICE_PORT")
 SECRET_KEY = APP_SECRET
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = HOSTS
 
