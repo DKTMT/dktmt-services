@@ -112,6 +112,8 @@ class SchedulePredictView(APIView):
                 'updated_at': ticket.updated_at,
             })
 
+        ticket_list = sorted(ticket_list, key=lambda k: k['name'])
+
         response_data = {'tickets': ticket_list}
         return JsonResponse(response_data, status=status.HTTP_200_OK)
 

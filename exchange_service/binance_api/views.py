@@ -168,17 +168,7 @@ class PortHistoryView(APIView):
     def get(self, request):
         email = request.user_data["email"]
         hashed_email = hash(email)
-        range_days = request.data.get('range')
-
-        # Validate range_days value
-        if range_days is None:
-            raise ValidationError('Range value is required')
-        try:
-            range_days = int(range_days)
-            if range_days < 7 or range_days > 30:
-                raise ValueError
-        except ValueError:
-            raise ValidationError('Range value must be between 7 and 30')
+        range_days = 7
 
         try:
             user = UserAPI.objects.get(hashed_email=hashed_email)

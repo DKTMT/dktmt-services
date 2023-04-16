@@ -27,6 +27,10 @@ class ReverseProxyMiddleware:
             else:
                 return HttpResponseBadRequest('Bad request')
 
+            query_params = request.GET.urlencode()
+            if (query_params):
+                microservice_url + "?" + query_params
+
             # try:
             print (microservice_url)
             response = requests.request(
