@@ -56,7 +56,7 @@ class CallbackView(APIView):
                 "notifications to help you make informed investment decisions."
             )
             LineNotify.send_message(access_token, welcome_message)
-            return HttpResponseRedirect("line://")  # Redirect to LINE app
+            return JsonResponse({"status": "success"})
         else:
             return JsonResponse({"error": "Failed to get access token."})
 
