@@ -88,6 +88,15 @@ def get_market_data(symbol, interval, exchange, limit):
         ] for candle in candles]
     else:
         return None
+    
+class PredictInfoView(APIView):
+    def get(self, request):
+        response = Response()
+        response.data = {
+            "timeframe": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"],
+            "exchange": ["binance", "bitkub", "forex", "stock"]
+        }
+        return response
 
 # Create your views here.
 class BaseStrategyView(APIView):
