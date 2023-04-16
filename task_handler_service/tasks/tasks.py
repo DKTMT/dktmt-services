@@ -34,7 +34,6 @@ def schedule_prediction_task(ticket_id, user_data):
 
 @shared_task
 def run_prediction_and_notify_task(ticket, user_data):
-    print("run_prediction_and_notify_task called")
     predict_service_url = f"http://{PREDICT_SERVICE_HOST}:{PREDICT_SERVICE_PORT}"
     notify_service_url = f"http://{NOTIFY_SERVICE_HOST}:{NOTIFY_SERVICE_PORT}"
 
@@ -57,17 +56,14 @@ def run_prediction_and_notify_task(ticket, user_data):
     }
     predict_response = requests.post(url=predict_url, json=combined_data, headers=headers)
 
-    print(predict_response)
-
     if predict_response.status_code == status.HTTP_200_OK:
-        predict_data = predict_response.json()
-        pretty_predict_data = json.dumps(predict_data, indent=4, sort_keys=True)
-
-        print (pretty_predict_data)
+        predict_data = predict_response.json()["results"]
 
         notify_url = f'{notify_service_url}/api/notify/line_notify/send_message/'
-        notify_response = requests.post(url=notify_url, json={'message': pretty_predict_data}, headers=headers)
-
-        print(notify_response)
+        for predict_strategy, predict_result in predict_data.items():
+            if (predict_result == ticket.mode or ticket.mode == "all"):
+                combined_data = {'message': f'{predict_strategy} predicted to...{predict_result.upper()}'}
+                combined_data['user_data'] = user_data
+                notify_response = requests.post(url=notify_url, json=combined_data, headers=headers)
 
     return predict_response.status_code

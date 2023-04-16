@@ -15,12 +15,12 @@ class OAuthValidationMiddleware:
         return path in self.excluded_paths
 
     def __call__(self, request):
-        print (request.headers.get("HOST"))
-        if not self.is_excluded_path(request.path) or request.headers.get("HOST") == f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}':
-            try:
-                request.user_data = json.loads(request.body).get("user_data", {})
-            except json.JSONDecodeError:
-                print("Invalid JSON data in request.body")
+        if not self.is_excluded_path(request.path):
+            if request.headers.get("HOST") == f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}':
+                try:
+                    request.user_data = json.loads(request.body).get("user_data", {})
+                except json.JSONDecodeError:
+                    print("Invalid JSON data in request.body")
         else:
             validate_url = "http://" + AUTH_SERVICE_HOST + ":" + AUTH_SERVICE_PORT + "/api/auth/validate"
             try:

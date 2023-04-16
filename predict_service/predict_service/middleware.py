@@ -9,7 +9,6 @@ class OAuthValidationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        print (request.headers.get("HOST"))
         if request.headers.get("HOST") == f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}':
             try:
                 request.user_data = json.loads(request.body).get("user_data", {})
