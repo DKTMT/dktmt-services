@@ -6,10 +6,16 @@ class Ticket(models.Model):
         ('pause', 'Pause'),
         ('close', 'Close'),
     ]
+    MODE_CHOICES = [
+        ('buy', 'buy'),
+        ('sell', 'sell'),
+        ('all', 'all'),
+    ]
     task_id = models.CharField(max_length=255, null=True, blank=True)
     name = models.CharField(max_length=255)
     duration = models.CharField(max_length=10)
     period = models.CharField(max_length=10)
+    mode = models.CharField(max_length=5, choices=MODE_CHOICES, default='all')
     symbol = models.CharField(max_length=20)
     timeframe = models.CharField(max_length=10)
     exchange = models.CharField(max_length=20)

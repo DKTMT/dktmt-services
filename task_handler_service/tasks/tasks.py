@@ -52,7 +52,6 @@ def run_prediction_and_notify_task(ticket, user_data):
     headers = {
         'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
         'Content-type': 'application/json',
-        'X-Task-Handler' : 'True'
     }
     predict_response = requests.post(url=predict_url, json=combined_data, headers=headers)
 

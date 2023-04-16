@@ -15,18 +15,29 @@ def hash(data):
                     bytes(data, 'utf-8'),
                     digestmod=hashlib.sha256).hexdigest()
 
+class AccessTokenView(APIView):
+    def get(self, request):
+        email = request.user_data["email"]
+        hashed_email = hash(email)
+        try:
+            access_token_obj = AccessToken.objects.get(hashed_email=hashed_email)
+            return JsonResponse({"result": True})
+        except AccessToken.DoesNotExist:
+            return JsonResponse({"result": False})
+
 class GenerateAuthorizationURLView(APIView):
     def get(self, request, *args, **kwargs):
         email = request.user_data["email"]
-        auth_url = LineNotify.generate_authorization_url(email)
+        hashed_email = hash(email)
+        auth_url = LineNotify.generate_authorization_url(hashed_email)
         return JsonResponse({"auth_url": auth_url})
 
 
 class CallbackView(APIView):
     def post(self, request):
         code = request.POST.get("code")
-        email = request.POST.get("state")
-        if code is None or email is None:
+        hashed_email = request.POST.get("state")
+        if code is None or hashed_email is None:
             return JsonResponse({"error": "Invalid request."})
 
         line_notify = LineNotify(
@@ -38,7 +49,7 @@ class CallbackView(APIView):
         access_token = line_notify.get_access_token(code)
 
         if access_token:
-            self.save_access_token_to_user(email, access_token)
+            self.save_access_token_to_user(hashed_email, access_token)
             welcome_message = (
                 "Welcome to DKTMT! We are excited to have you join our community and "
                 "look forward to providing you with real-time trading predictions and "
@@ -49,8 +60,7 @@ class CallbackView(APIView):
         else:
             return JsonResponse({"error": "Failed to get access token."})
 
-    def save_access_token_to_user(self, email, access_token):
-        hashed_email = hash(email)
+    def save_access_token_to_user(self, hashed_email, access_token):
         AccessToken.objects.update_or_create(
             hashed_email=hashed_email, defaults={"access_token": access_token}
         )

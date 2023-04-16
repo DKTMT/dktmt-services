@@ -73,10 +73,10 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "task_handler_service.middleware.OAuthValidationMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "task_handler_service.middleware.OAuthValidationMiddleware",
 ]
 
 ROOT_URLCONF = "task_handler_service.urls"

@@ -7,9 +7,8 @@ from django.http import JsonResponse, HttpResponse
 
 from rest_framework.views import APIView
 from rest_framework import status
-from rest_framework.parsers import JSONParser
 
-from task_handler_service.settings import EXCHANGE_SERVICE_HOST, EXCHANGE_SERVICE_PORT, PREDICT_SERVICE_HOST, PREDICT_SERVICE_PORT, NOTIFY_SERVICE_HOST, NOTIFY_SERVICE_PORT, ENCRYPTION_KEY
+from task_handler_service.settings import TASK_HANDLER_SERVICE_HOST, TASK_HANDLER_SERVICE_PORT, EXCHANGE_SERVICE_HOST, EXCHANGE_SERVICE_PORT, PREDICT_SERVICE_HOST, PREDICT_SERVICE_PORT, NOTIFY_SERVICE_HOST, NOTIFY_SERVICE_PORT, ENCRYPTION_KEY
 from task_handler_service.celery import app
 
 from .models import Ticket
@@ -27,45 +26,28 @@ def hash(data):
                     bytes(data, 'utf-8'),
                     digestmod=hashlib.sha256).hexdigest()
 
-class PredictView(APIView):
-    def dispatch(self, request, *args, **kwargs):
-        task_type = kwargs["task_type"]
-        url = f'{predict_service_url}/api/predict/{task_type}'
-
-        # Create a new dictionary and update it with request.body and request.user_data
-        combined_data = {}
-        if request.body:
-            try:
-                body_data = json.loads(request.body)
-                combined_data.update(body_data)
-            except json.JSONDecodeError:
-                print("Invalid JSON data in request.body")
-        if request.user_data:
-            combined_data["user_data"] = request.user_data
-
-        # Create a copy of the request headers and add the X-Task-Handler header
-        request_headers = dict(request.headers)
-        request_headers['X-Task-Handler'] = 'True'
-
-        response = requests.request(
-            method=request.method,
-            url=url,
-            headers=request_headers,  # Use the updated headers
-            data=json.dumps(combined_data)  # Convert the updated data to JSON string
-        )
-        return HttpResponse(response.content, status=response.status_code)
-
-        
 class SchedulePredictView(APIView):
     def post(self, request):
         body = request.data
 
-        required_keys = {'symbol', 'timeframe', 'exchange', 'strategies', 'duration', 'period', 'name'}
+        required_keys = {'symbol', 'timeframe', 'exchange', 'strategies', 'duration', 'period', 'name', 'mode'}
         if not required_keys.issubset(body.keys()):
             return HttpResponse("Missing required keys in the request body", status=status.HTTP_400_BAD_REQUEST)
 
         email = request.user_data["email"]
         hashed_email = hash(email)
+        # json_body = {"user_data": request.user_data}
+        # headers = {
+        #     'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
+        #     'Content-type': 'application/json',
+        # }
+
+        # notify_service_url = f"http://{NOTIFY_SERVICE_HOST}:{NOTIFY_SERVICE_PORT}"
+        # validate_url = f'{notify_service_url}/api/notify/line_notify/validate'
+        # validate_response = requests.get(url=validate_url, json=json_body, headers=headers)
+
+        # if (validate_response.json()["result"] == False):
+        #     return HttpResponse("Add LINE Notify to your account first", status=status.HTTP_400_BAD_REQUEST)
 
         ticket = Ticket(created_by=hashed_email, status='open', **body)
         ticket.save()
@@ -123,6 +105,7 @@ class SchedulePredictView(APIView):
                 'symbol': ticket.symbol,
                 'timeframe': ticket.timeframe,
                 'exchange': ticket.exchange,
+                'mode': ticket.mode,
                 'strategies': ticket.strategies,
                 'status': ticket.status,
                 'created_at': ticket.created_at,
