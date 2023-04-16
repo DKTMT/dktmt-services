@@ -118,6 +118,7 @@ class StrategyView(APIView):
         for strategy in serializer.data:
             if strategy['anonymous'] and strategy['created_by'] != user_name:
                 strategy['created_by'] = "anonymous"
+            strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
 
         custom_strategies = [f'{result["name"]} by {result["created_by"]}' for result in serializer.data]
 
@@ -207,6 +208,8 @@ class CustomStrategyView(APIView):
         for strategy in serializer.data:
             if strategy['anonymous'] and strategy['created_by'] != user_name:
                 strategy['created_by'] = "anonymous"
+            strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
+            
 
         return Response(serializer.data)
 
