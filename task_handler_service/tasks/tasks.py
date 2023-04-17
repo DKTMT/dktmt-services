@@ -82,7 +82,7 @@ def run_prediction_and_notify_task(ticket, user_data):
 
         notify_url = f'{notify_service_url}/api/notify/line_notify/send_message/'
 
-        combined_data = {'message': f'From Ticket: [[ {ticket.name} ]] of {ticket.symbol} ({ticket.timeframe} time frame)'}
+        combined_data = {'message': f'From Ticket: [[ {ticket.name} ]] of {ticket.symbol} ({ticket.timeframe} timeframe)'}
         combined_data['user_data'] = user_data
         notify_response = requests.post(url=notify_url, json=combined_data, headers=headers)
         for predict_result in predict_data:
