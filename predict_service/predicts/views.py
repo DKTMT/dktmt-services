@@ -1,3 +1,4 @@
+import uuid
 import requests
 import json
 
@@ -102,8 +103,9 @@ class PredictInfoView(APIView):
 class BaseStrategyView(APIView):
     def get(self, request):
         response = Response()
+        base_strategies = run_strategies_find()
         response.data = {
-            'strategies':  run_strategies_find()
+            'strategies':  list(map(lambda x: {"id": f'base-{x}', "name": x}, base_strategies))
         }
         return response
 
@@ -115,29 +117,32 @@ class StrategyView(APIView):
             created_by=user_name) | CustomStrategy.objects.filter(public=True)
         serializer = CustomStrategySerializer(strategies, many=True)
         
+        custom_strategies = []
         for strategy in serializer.data:
             if strategy['anonymous'] and strategy['created_by'] != user_name:
                 strategy['created_by'] = "anonymous"
-            strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
-
-        custom_strategies = [f'{result["name"]} by {result["created_by"]}' for result in serializer.data]
+                strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
+            custom_strategies.append({
+                "id": strategy["id"],
+                "name": strategy['name']
+            })
 
         response = Response()
         response.data = {
-            'strategies':  base_strategies + custom_strategies
+            'strategies':  list(map(lambda x: {"id": f'base-{x}', "name": x}, base_strategies)) + custom_strategies
         }
         return response
     
 class PredictView(APIView):
     def post(self, request):
-        symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
+        symbol, interval, exchange, strategies = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
 
         market_data = get_market_data(symbol, interval, exchange, 200)
         results = {}
 
-        for predictor in predictors:
-            result = run_prediction(predictor, market_data)
-            results[predictor] = result
+        for strategy_id in strategies:
+            result = run_prediction(strategy_id, market_data)
+            results[strategy_id] = result
 
         return Response({'results': results})
     
@@ -163,22 +168,27 @@ class BacktestView(APIView):
         return Response(serialized_results, status=status.HTTP_200_OK)
     
     def post(self, request):
-        symbol, interval, exchange, predictors = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
+        symbol, interval, exchange, strategies = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
         market_data = get_market_data(symbol, interval, exchange, 400)
 
-        results = {}
-        for predictor in predictors:
+        results = []
+        for strategy_id in strategies:
             try:
-                result = BacktestResult.objects.get(name=predictor)
+                result = BacktestResult.objects.get(id=strategy_id)
             except BacktestResult.DoesNotExist:
                 # If no such result exists, create a new one
-                result = BacktestResult(name=predictor)
+                result = BacktestResult(id=strategy_id)
+                if strategy_id.startswith("base-"):
+                    result.name = strategy_id[len('base-'):]
+                else:
+                    strategy = CustomStrategy.objects.get(id=strategy_id)
+                    result.name = strategy.name
             
             result.status = 'running'
             result.save()
             
              # Run the backtest and update the result fields
-            backtest_data = run_backtest_performance(predictor, market_data)
+            backtest_data = run_backtest_performance(strategy_id, market_data)
             result.number_of_buy_sell = backtest_data['number_of_buy_sell']
             result.accuracy_of_buy_sell = backtest_data['accuracy_of_buy_sell']
             result.number_of_mock_trade = backtest_data['number_of_mock_trade']
@@ -188,13 +198,15 @@ class BacktestView(APIView):
             # Save the updated result and return a success response
             result.status = 'ready'
             result.save()
-            results[predictor] = {
+            results.append({
+                "id": strategy_id,
+                "name": result.name,
                 'number_of_buy_sell': result.number_of_buy_sell,
                 'accuracy_of_buy_sell': result.accuracy_of_buy_sell,
                 'number_of_mock_trade': result.number_of_mock_trade,
                 'start_budget' : result.start_budget,
                 'start_budget' : result.final_budget
-            }
+            })
 
         return Response({'results': results})
 
@@ -209,17 +221,29 @@ class CustomStrategyView(APIView):
             if strategy['anonymous'] and strategy['created_by'] != user_name:
                 strategy['created_by'] = "anonymous"
             strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
-            
 
-        return Response(serializer.data)
+        response = Response()
+        response.data = {
+            'strategies':  serializer.data
+        }
+        return response
 
     def post(self, request):
         data = request.data
+        custom_id = 'custom-' + str(uuid.uuid4())
+        data["id"] = custom_id
         data['created_by'] = request.user_data["name"]
         serializer = CustomStrategySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            result = {
+                "id": custom_id,
+                "name": serializer.data["name"],
+                "method": serializer.data["method"],
+                "public": serializer.data["public"],
+                "anonymous": serializer.data["anonymous"]
+            }
+            return Response(result, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
@@ -238,10 +262,12 @@ class CustomStrategyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
-        strategy_name = request.data["strategy"]
+        strategy_id = request.data["id"]
         username = request.user_data["name"]
         try:
-            strategy = CustomStrategy.objects.get(name=strategy_name, created_by=username)
+            strategy = CustomStrategy.objects.get(id=strategy_id)
+            if strategy.created_by != username:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
         except CustomStrategy.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 

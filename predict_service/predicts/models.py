@@ -1,6 +1,7 @@
 from django.db import models
 
 class CustomStrategy(models.Model):
+    id = models.CharField(primary_key=True, max_length=50)
     name = models.CharField(max_length=255)
     method = models.JSONField()
     public = models.BooleanField()
@@ -19,7 +20,7 @@ class BacktestResult(models.Model):
         ('success', 'Success'),
         ('running', 'Running')
     ]
-
+    id = models.CharField(primary_key=True, max_length=50)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ready')
     last_update = models.DateTimeField(auto_now=True)

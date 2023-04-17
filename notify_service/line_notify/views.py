@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 
 from rest_framework.views import APIView
 
-from notify_service.settings import ENCRYPTION_KEY, LINE_NOTIFY_CLIENT_ID, LINE_NOTIFY_CLIENT_SECRET, LINE_NOTIFY_REDIRECT_URI
+from notify_service.settings import ENCRYPTION_KEY, LINE_NOTIFY_CLIENT_ID, LINE_NOTIFY_CLIENT_SECRET, LINE_NOTIFY_REDIRECT_URI, LINE_NOTIFY_SECOND_REDIRECT_URI
 from .line_notify import LineNotify
 from .models import AccessToken
 
@@ -56,7 +56,7 @@ class CallbackView(APIView):
                 "notifications to help you make informed investment decisions."
             )
             LineNotify.send_message(access_token, welcome_message)
-            return JsonResponse({"status": "success"})
+            return HttpResponseRedirect(LINE_NOTIFY_SECOND_REDIRECT_URI)
         else:
             return JsonResponse({"error": "Failed to get access token."})
 
