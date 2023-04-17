@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .predict import run_prediction, run_strategies_find, run_backtest_performance
+from .predict import run_prediction, run_strategies_find, run_backtest_performance, get_all_strategies
 from .models import BacktestResult, CustomStrategy
 from .serializers import CustomStrategySerializer
 
@@ -111,25 +111,10 @@ class BaseStrategyView(APIView):
 
 class StrategyView(APIView):
     def get(self, request):
-        base_strategies = run_strategies_find()
         user_name = request.user_data["name"]
-        strategies = CustomStrategy.objects.filter(
-            created_by=user_name) | CustomStrategy.objects.filter(public=True)
-        serializer = CustomStrategySerializer(strategies, many=True)
-        
-        custom_strategies = []
-        for strategy in serializer.data:
-            if strategy['anonymous'] and strategy['created_by'] != user_name:
-                strategy['created_by'] = "anonymous"
-                strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
-            custom_strategies.append({
-                "id": strategy["id"],
-                "name": strategy['name']
-            })
-
         response = Response()
         response.data = {
-            'strategies':  list(map(lambda x: {"id": f'base-{x}', "name": x}, base_strategies)) + custom_strategies
+            'strategies':  get_all_strategies(user_name)
         }
         return response
     
@@ -138,11 +123,16 @@ class PredictView(APIView):
         symbol, interval, exchange, strategies = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
 
         market_data = get_market_data(symbol, interval, exchange, 200)
-        results = {}
+        user_name = request.user_data["name"]
+        all_strategies = get_all_strategies(user_name)
 
+        results = []
         for strategy_id in strategies:
-            result = run_prediction(strategy_id, market_data)
-            results[strategy_id] = result
+            results.append({
+                "id": strategy_id,
+                "name": next((strategy['name'] for strategy in all_strategies if strategy['id'] == strategy_id), strategy_id),
+                "result": run_prediction(strategy_id, market_data)
+            })
 
         return Response({'results': results})
     
@@ -217,10 +207,21 @@ class CustomStrategyView(APIView):
             created_by=user_name) | CustomStrategy.objects.filter(public=True)
         serializer = CustomStrategySerializer(strategies, many=True)
         
+        all_strategies = get_all_strategies(user_name)
+
         for strategy in serializer.data:
-            if strategy['anonymous'] and strategy['created_by'] != user_name:
-                strategy['created_by'] = "anonymous"
-            strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
+            if strategy['created_by'] != user_name:
+                if strategy['anonymous']:
+                    strategy['created_by'] = "anonymous"
+                strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
+
+            method_name = strategy['method']["name"]
+            if  method_name == "chain":
+                print (strategy['method']["strategies"])
+                strategy['method']["strategies"] = [next((strategy["name"] for strategy in all_strategies if strategy["id"] == strategy_id), strategy_id) for strategy_id in strategy['method']["strategies"]]
+            elif method_name == "poll":
+                for sub_strategy_id in strategy['method']["strategies"]:
+                    sub_strategy_id["strategy"] = next((strategy['name'] for strategy in all_strategies if strategy['id'] == sub_strategy_id["strategy"]), sub_strategy_id["strategy"])
 
         response = Response()
         response.data = {

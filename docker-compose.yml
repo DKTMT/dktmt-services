@@ -83,6 +83,20 @@ services:
     depends_on: 
       - notify-service-db
 
+  blog-service:
+    build: ./blog_service
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8006"
+    env_file:
+      - .env
+    environment:
+      - ./blog_service/blog_service/settings.py
+    restart: on-failure
+    depends_on: 
+      - blog-service-db
+
   auth-service-db:
     image: postgres:latest
     environment:
@@ -125,6 +139,15 @@ services:
       - POSTGRES_USER=${NOTIFY_SERVICE_DB_USERNAME}
       - POSTGRES_PASSWORD=${NOTIFY_SERVICE_DB_PASSWORD}
       - POSTGRES_DB=${NOTIFY_SERVICE_DB_NAME}
+
+  blog-service-db:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${BLOG_SERVICE_DB_USERNAME}
+      - POSTGRES_PASSWORD=${BLOG_SERVICE_DB_PASSWORD}
+      - POSTGRES_DB=${BLOG_SERVICE_DB_NAME}
 
   celery:
     build: ./task_handler_service

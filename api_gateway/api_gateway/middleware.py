@@ -1,6 +1,6 @@
 import requests
 from django.http import HttpResponse, HttpResponseBadRequest
-from api_gateway.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST, EXCHANGE_SERVICE_PORT, EXCHANGE_SERVICE_HOST, NOTIFY_SERVICE_PORT, NOTIFY_SERVICE_HOST, PREDICT_SERVICE_PORT, PREDICT_SERVICE_HOST, TASK_HANDLER_SERVICE_PORT, TASK_HANDLER_SERVICE_HOST
+from api_gateway.settings import AUTH_SERVICE_PORT, AUTH_SERVICE_HOST, EXCHANGE_SERVICE_PORT, EXCHANGE_SERVICE_HOST, NOTIFY_SERVICE_PORT, NOTIFY_SERVICE_HOST, PREDICT_SERVICE_PORT, PREDICT_SERVICE_HOST, TASK_HANDLER_SERVICE_PORT, TASK_HANDLER_SERVICE_HOST, BLOG_SERVICE_HOST, BLOG_SERVICE_PORT
 
 
 class ReverseProxyMiddleware:
@@ -24,6 +24,9 @@ class ReverseProxyMiddleware:
             # notification service
             elif request.path.startswith('/api/notify'):
                 microservice_url = "http://" + NOTIFY_SERVICE_HOST + ":" + NOTIFY_SERVICE_PORT + request.path
+            # blog service
+            elif request.path.startswith('/api/blog'):
+                microservice_url = "http://" + BLOG_SERVICE_HOST + ":" + BLOG_SERVICE_PORT + request.path
             else:
                 return HttpResponseBadRequest('Bad request')
 

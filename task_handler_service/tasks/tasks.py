@@ -66,12 +66,16 @@ def run_prediction_and_notify_task(ticket, user_data):
     combined_data['user_data'] = user_data
 
     predict_url = f'{predict_service_url}/api/predict/run'
+    strategy_url = f'{predict_service_url}/api/predict/strategy/all'
 
     headers = {
         'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
         'Content-type': 'application/json',
     }
     predict_response = requests.post(url=predict_url, json=combined_data, headers=headers)
+
+    strategies_response = requests.get(url=strategy_url, json=combined_data, headers=headers)
+    strategies = strategies_response.json()["strategies"]
 
     if predict_response.status_code == status.HTTP_200_OK:
         predict_data = predict_response.json()["results"]
@@ -83,6 +87,7 @@ def run_prediction_and_notify_task(ticket, user_data):
         notify_response = requests.post(url=notify_url, json=combined_data, headers=headers)
         for predict_strategy, predict_result in predict_data.items():
             if (predict_result == ticket.mode or ticket.mode == "all"):
+                strategy = next((item for item in strategies if item["id"] == ticket.strategies), None),
                 combined_data = {'message': f'{predict_strategy} predicted to...{predict_result.upper()}'}
                 combined_data['user_data'] = user_data
                 notify_response = requests.post(url=notify_url, json=combined_data, headers=headers)

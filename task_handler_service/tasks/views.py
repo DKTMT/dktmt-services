@@ -7,6 +7,7 @@ from django.http import JsonResponse, HttpResponse
 
 from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework.response import Response
 
 from task_handler_service.settings import TASK_HANDLER_SERVICE_HOST, TASK_HANDLER_SERVICE_PORT, EXCHANGE_SERVICE_HOST, EXCHANGE_SERVICE_PORT, PREDICT_SERVICE_HOST, PREDICT_SERVICE_PORT, NOTIFY_SERVICE_HOST, NOTIFY_SERVICE_PORT, ENCRYPTION_KEY
 from task_handler_service.celery import app
@@ -30,24 +31,25 @@ class SchedulePredictView(APIView):
     def post(self, request):
         body = request.data
 
+        headers = {
+            'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
+            'Content-type': 'application/json',
+        }
+        
+        validate_response = requests.get(
+            url=f'{notify_service_url}/api/notify/line_notify/validate',
+            json={"user_data": request.user_data},
+            headers=headers)
+        if validate_response.status != status.HTTP_200_OK:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
         required_keys = {'symbol', 'timeframe', 'exchange', 'strategies', 'duration', 'period', 'name', 'mode'}
         if not required_keys.issubset(body.keys()):
             return HttpResponse("Missing required keys in the request body", status=status.HTTP_400_BAD_REQUEST)
 
         email = request.user_data["email"]
         hashed_email = hash(email)
-        # json_body = {"user_data": request.user_data}
-        # headers = {
-        #     'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
-        #     'Content-type': 'application/json',
-        # }
-
-        # notify_service_url = f"http://{NOTIFY_SERVICE_HOST}:{NOTIFY_SERVICE_PORT}"
-        # validate_url = f'{notify_service_url}/api/notify/line_notify/validate'
-        # validate_response = requests.get(url=validate_url, json=json_body, headers=headers)
-
-        # if (validate_response.json()["result"] == False):
-        #     return HttpResponse("Add LINE Notify to your account first", status=status.HTTP_400_BAD_REQUEST)
 
         ticket = Ticket(created_by=hashed_email, status='open', **body)
         ticket.save()
@@ -93,6 +95,16 @@ class SchedulePredictView(APIView):
     def get(self, request):
         # Get the user's hashed email
         hashed_email = hash(request.user_data['email'])
+        headers = {
+            'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
+            'Content-type': 'application/json',
+        }
+        
+        strategies_response = requests.get(
+            url=f'{predict_service_url}/api/predict/strategy/all',
+            json={"user_data": request.user_data},
+            headers=headers)
+        strategies =  strategies_response.json()["strategies"]
 
         # Retrieve the user's tickets
         tickets = Ticket.objects.filter(created_by=hashed_email)
@@ -106,7 +118,7 @@ class SchedulePredictView(APIView):
                 'timeframe': ticket.timeframe,
                 'exchange': ticket.exchange,
                 'mode': ticket.mode,
-                'strategies': ticket.strategies,
+                'strategies': [next((item["name"] for item in strategies if item["id"] == search_id), None) for search_id in ticket.strategies],
                 'status': ticket.status,
                 'created_at': ticket.created_at,
                 'updated_at': ticket.updated_at,

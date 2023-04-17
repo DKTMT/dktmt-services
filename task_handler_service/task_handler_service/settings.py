@@ -49,7 +49,7 @@ PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 SECRET_KEY = APP_SECRET
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = HOSTS
 

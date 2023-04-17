@@ -35,6 +35,8 @@ PREDICT_SERVICE_HOST = os.environ.get("PREDICT_SERVICE_HOST")
 PREDICT_SERVICE_PORT = os.environ.get("PREDICT_SERVICE_PORT")
 NOTIFY_SERVICE_HOST = os.environ.get("NOTIFY_SERVICE_HOST")
 NOTIFY_SERVICE_PORT = os.environ.get("NOTIFY_SERVICE_PORT")
+BLOG_SERVICE_HOST = os.environ.get("BLOG_SERVICE_HOST")
+BLOG_SERVICE_PORT = os.environ.get("BLOG_SERVICE_PORT")
 
 
 # Quick-start development settings - unsuitable for production

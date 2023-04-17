@@ -4,6 +4,7 @@ import importlib
 
 from django.shortcuts import get_object_or_404
 
+from .serializers import CustomStrategySerializer
 from .models import CustomStrategy
 
 def run_prediction(strategy_id, market_data):
@@ -129,3 +130,20 @@ def run_backtest_performance(strategy_id, market_data):
         'start_budget': 100000,
         'final_budget': budget
     }
+
+def get_all_strategies(user_name):
+    strategies = CustomStrategy.objects.filter(
+        created_by=user_name) | CustomStrategy.objects.filter(public=True)
+    serializer = CustomStrategySerializer(strategies, many=True)
+    
+    base_strategies = run_strategies_find()
+    custom_strategies = []
+    for strategy in serializer.data:
+        if strategy['anonymous'] and strategy['created_by'] != user_name:
+            strategy['created_by'] = "anonymous"
+            strategy['name'] = f'{strategy["name"]} by {strategy["created_by"]}'
+        custom_strategies.append({
+            "id": strategy["id"],
+            "name": strategy['name']
+        })
+    return list(map(lambda x: {"id": f'base-{x}', "name": x}, base_strategies)) + custom_strategies
