@@ -31,16 +31,11 @@ class SchedulePredictView(APIView):
     def post(self, request):
         body = request.data
 
-        headers = {
-            'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
-            'Content-type': 'application/json',
-        }
-        
         validate_response = requests.get(
             url=f'{notify_service_url}/api/notify/line_notify/validate',
             json={"user_data": request.user_data},
-            headers=headers)
-        if validate_response.status != status.HTTP_200_OK:
+            headers=request.headers)
+        if validate_response.status_code != 200:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 

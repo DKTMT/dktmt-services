@@ -18,12 +18,8 @@ class PostList(APIView):
             serializer.save(author=author)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-        # Print the request data and serializer errors for debugging
-        print("Request data:", request.data)
-        print("Serializer errors:", serializer.errors)
-        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+ 
 
 class PostDetail(APIView):
     def get_post(self, pk):

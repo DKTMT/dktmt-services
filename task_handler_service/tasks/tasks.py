@@ -82,13 +82,13 @@ def run_prediction_and_notify_task(ticket, user_data):
 
         notify_url = f'{notify_service_url}/api/notify/line_notify/send_message/'
 
-        combined_data = {'message': f'From Ticket: [[ {ticket.name} ]]'}
+        combined_data = {'message': f'From Ticket: [[ {ticket.name} ]] of {ticket.symbol} ({ticket.timeframe} time frame)'}
         combined_data['user_data'] = user_data
         notify_response = requests.post(url=notify_url, json=combined_data, headers=headers)
-        for predict_strategy, predict_result in predict_data.items():
-            if (predict_result == ticket.mode or ticket.mode == "all"):
+        for predict_result in predict_data:
+            if (predict_result["result"] == ticket.mode or ticket.mode == "all"):
                 strategy = next((item for item in strategies if item["id"] == ticket.strategies), None),
-                combined_data = {'message': f'{predict_strategy} predicted to...{predict_result.upper()}'}
+                combined_data = {'message': f'{predict_result["name"]} predicted to...{predict_result["result"].upper()}'}
                 combined_data['user_data'] = user_data
                 notify_response = requests.post(url=notify_url, json=combined_data, headers=headers)
 

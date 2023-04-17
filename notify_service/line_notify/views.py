@@ -19,6 +19,8 @@ class AccessTokenView(APIView):
     def get(self, request):
         email = request.user_data["email"]
         hashed_email = hash(email)
+
+        print (request.user_data)
         try:
             access_token_obj = AccessToken.objects.get(hashed_email=hashed_email)
             return JsonResponse({"result": True})
