@@ -95,15 +95,11 @@ class SchedulePredictView(APIView):
         user_data = json.loads(request.headers['X-User-Data'])
         email = user_data.get('email')
         hashed_email = hash(email)
-        headers = {
-            'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
-            'Content-type': 'application/json',
-        }
         
         strategies_response = requests.get(
             url=f'{predict_service_url}/api/predict/strategy/all',
             json={"user_data": json.loads(request.headers['X-User-Data'])},
-            headers=headers)
+            headers=request.headers)
         strategies =  strategies_response.json()["strategies"]
 
         # Retrieve the user's tickets
