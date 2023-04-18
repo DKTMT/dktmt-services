@@ -1,4 +1,4 @@
-def parabolic_sar(market_price):
+def parabolic_sar(market_price, acceleration=0.02, max_acceleration=0.2):
     data = market_price[-100:].copy()
     
     # Extract the high, low, and close prices from the data
@@ -7,8 +7,6 @@ def parabolic_sar(market_price):
     closes = [float(d[4]) for d in data]
     
     # Initialize the variables
-    acceleration = 0.02
-    max_acceleration = 0.2
     current_high = highs[0]
     current_low = lows[0]
     sar = current_low
@@ -63,4 +61,3 @@ def parabolic_sar(market_price):
         current_position = "buy"
     
     return current_position
-

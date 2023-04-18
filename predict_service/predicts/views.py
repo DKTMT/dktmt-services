@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .predict import run_prediction, run_strategies_find, run_backtest_performance, get_all_strategies
+from .predict import run_prediction, run_strategies_find, run_backtest_performance, get_all_strategies, get_base_strategy_params
 from .models import BacktestResult, CustomStrategy
 from .serializers import CustomStrategySerializer
 
@@ -102,10 +102,17 @@ class PredictInfoView(APIView):
 # Create your views here.
 class BaseStrategyView(APIView):
     def get(self, request):
+        base_strategy_names = run_strategies_find()
+        base_strategies = []
+        for strategy in base_strategy_names:
+            base_strategies.append({
+                "id": f'base-{strategy}',
+                "name": strategy,
+                "params": get_base_strategy_params(strategy)
+            })
         response = Response()
-        base_strategies = run_strategies_find()
         response.data = {
-            'strategies':  list(map(lambda x: {"id": f'base-{x}', "name": x}, base_strategies))
+            'strategies': base_strategies
         }
         return response
 

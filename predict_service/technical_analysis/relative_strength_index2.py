@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def relative_strength_index2(market_data, period=14, buy_threshold=30, sell_threshold=70):
+def relative_strength_index2(market_data, period: int = 14, buy_threshold: float = 30.0, sell_threshold: float = 70.0) -> str:
     df = pd.DataFrame(market_data, columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
     df['close'] = df['close'].astype(float)
 

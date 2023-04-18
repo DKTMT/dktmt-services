@@ -1,7 +1,7 @@
 import numpy as np
 
-def pivot_points(market_data):
-    data = market_data[-12:].copy()
+def pivot_points(market_data, num_periods: int = 12) -> str:
+    data = market_data[-num_periods:].copy()
     # Extract the closing prices from the API response
     closes = [float(entry[4]) for entry in data]
 

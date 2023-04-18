@@ -1,8 +1,11 @@
+from typing import List
+
 import pandas as pd
 import numpy as np
 import talib
 
-def zigzag(high, low, close, pct_threshold=5):
+
+def zigzag(high: np.ndarray, low: np.ndarray, close: np.ndarray, pct_threshold: float = 5) -> np.ndarray:
     zz = talib.HT_TRENDLINE(close)
     swing_high = np.where(high > np.roll(zz, 1))[0]
     swing_low = np.where(low < np.roll(zz, 1))[0]
@@ -10,7 +13,8 @@ def zigzag(high, low, close, pct_threshold=5):
     
     return zigzag_points
 
-def elliot_wave_pattern(zigzag_points, close, pct_threshold):
+
+def elliot_wave_pattern(zigzag_points: np.ndarray, close: np.ndarray, pct_threshold: float) -> str:
     if len(zigzag_points) < 7:
         return "hold"
 
@@ -42,7 +46,7 @@ def elliot_wave_pattern(zigzag_points, close, pct_threshold):
         return "hold"
 
 
-def elliot_wave2(market_data):
+def elliot_wave2(market_data, pct_threshold: float = 5) -> str:
     klines = market_data.copy()
     df = pd.DataFrame(klines, columns=["open_time", "open", "high", "low", "close", "volume", "close_time", "quote_asset_volume", "number_of_trades", "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume", "ignore"])
     df = df.astype({"open": "float64", "high": "float64", "low": "float64", "close": "float64", "volume": "float64"})
@@ -51,7 +55,6 @@ def elliot_wave2(market_data):
     low = df["low"].values
     close = df["close"].values
 
-    pct_threshold=5
     zigzag_points = zigzag(high, low, close, pct_threshold)
     signal = elliot_wave_pattern(zigzag_points, close, pct_threshold)
 

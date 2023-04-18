@@ -2,12 +2,8 @@ import pandas as pd
 import numpy as np
 import talib
 
-def order_blocks_and_breaker_blocks(market_data):
-
-    swing_lookback=10
-    show_last_bullish_ob=3
-    show_last_bearish_ob=3
-    use_candle_body=False
+def order_blocks_and_breaker_blocks(market_data, swing_lookback: int = 10, show_last_bullish_ob: int = 3,
+                                     show_last_bearish_ob: int = 3, use_candle_body: bool = False):
 
     klines = market_data.copy()
     data = pd.DataFrame(klines, columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])

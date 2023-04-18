@@ -5,7 +5,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler
 
-def lstm(market_data):
+def lstm(market_data, time_step: int = 50, epochs: int = 100, batch_size: int = 64) -> str:
     data = market_data.copy()
 
     data = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
@@ -45,7 +45,6 @@ def lstm(market_data):
         return np.array(dataX), np.array(dataY)
 
     # Set the time step and reshape the data for the LSTM model
-    time_step = 50
     X_train, y_train = create_dataset(train_data, time_step)
     X_test, y_test = create_dataset(test_data, time_step)
     X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
@@ -60,7 +59,7 @@ def lstm(market_data):
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     # Train the model
-    model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=64, verbose=0)
+    model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=epochs, batch_size=batch_size, verbose=0)
 
     # Make predictions on the testing data
     predictions = model.predict(X_test)
@@ -71,4 +70,3 @@ def lstm(market_data):
     last_signal = signal[-1]
 
     return last_signal
-

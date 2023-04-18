@@ -1,6 +1,6 @@
 import numpy as np
 
-def money_flow_index(market_price):
+def money_flow_index(market_price , period: int = 14, buy_threshold: int = 20, sell_threshold: int = 80) -> str:
     klines = market_price[-100:].copy()
 
     # Parse data to numpy arrays
@@ -23,16 +23,15 @@ def money_flow_index(market_price):
             negative_money_flow[i] = money_flow[i]
 
     # Calculate money flow ratio and money flow index
-    period = 14
     positive_money_flow_sum = np.sum(positive_money_flow[-period:])
     negative_money_flow_sum = np.sum(negative_money_flow[-period:])
     money_flow_ratio = positive_money_flow_sum / negative_money_flow_sum
     money_flow_index = 100 - (100 / (1 + money_flow_ratio))
 
     # Determine buy/sell/hold signal
-    if money_flow_index > 80:
+    if money_flow_index > sell_threshold:
         signal = "sell"
-    elif money_flow_index < 20:
+    elif money_flow_index < buy_threshold:
         signal = "buy"
     else:
         signal = "hold"
