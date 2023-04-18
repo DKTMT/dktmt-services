@@ -195,7 +195,17 @@ def get_base_strategy_params(strategy):
                         param_type = str(param.annotation)
                 else:
                     param_type = "None"
+                if param.default != inspect.Parameter.empty:
+                    default_value = param.default
+                else:
+                    default_value = "No default"
+
                 
-                result.append({"name": name, "type": param_type})
+                result.append({"name": name, "label":format_string(name), "type": param_type, "default": default_value})
 
             return result[1:]
+        
+def format_string(string):
+    words = string.split('_')
+    formatted_string = ' '.join([word.capitalize() for word in words])
+    return formatted_string

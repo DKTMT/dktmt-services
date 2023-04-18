@@ -1,7 +1,7 @@
 import pandas as pd
 import talib
 
-def macd_rsi_overlay(market_data, macd_fastperiod=12, macd_slowperiod=26, macd_signalperiod=9, rsi_timeperiod=14) -> str:
+def macd_rsi_overlay(market_data, macd_fastperiod: int = 12, macd_slowperiod: int = 26, macd_signalperiod: int = 9, rsi_timeperiod: int = 14) -> str:
     klines = market_data.copy()
 
     data = pd.DataFrame(klines, columns=["Open time", "Open", "High", "Low", "Close", "Volume", "Close time", "Quote asset volume", "Number of trades", "Taker buy base asset volume", "Taker buy quote asset volume", "Ignore"])

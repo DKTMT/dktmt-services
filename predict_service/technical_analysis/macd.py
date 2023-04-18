@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def macd(market_data, ema_short=12, ema_long=26, signal_period=9):
+def macd(market_data, ema_short: int = 12, ema_long: int = 26, signal_period: int = 9) -> str:
     data = market_data.copy()
     df = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'num_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
     # Convert timestamp to datetime format
