@@ -1,3 +1,4 @@
+import json
 from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,7 +13,8 @@ class PostList(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        author = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        author = user_data.get("name")
         serializer = PostSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(author=author)
@@ -48,7 +50,8 @@ class PostDetail(APIView):
 
 class LikeList(APIView):
     def post(self, request, post_id):
-        author = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        author = user_data.get("name")
         try:
             post = Post.objects.get(pk=post_id)
         except Post.DoesNotExist:
@@ -60,7 +63,8 @@ class LikeList(APIView):
 
 class ReviewList(APIView):
     def post(self, request, post_id):
-        author = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        author = user_data.get("name")
         try:
             post = Post.objects.get(pk=post_id)
         except Post.DoesNotExist:

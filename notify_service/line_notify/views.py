@@ -17,10 +17,10 @@ def hash(data):
 
 class AccessTokenView(APIView):
     def get(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
 
-        print (request.user_data)
         try:
             access_token_obj = AccessToken.objects.get(hashed_email=hashed_email)
             return JsonResponse({"result": True})
@@ -29,7 +29,8 @@ class AccessTokenView(APIView):
 
 class GenerateAuthorizationURLView(APIView):
     def get(self, request, *args, **kwargs):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
         auth_url = LineNotify.generate_authorization_url(hashed_email)
         return JsonResponse({"auth_url": auth_url})
@@ -69,7 +70,8 @@ class CallbackView(APIView):
 
 class SendMessageView(APIView):
     def post(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = AccessToken.hash_email(email)
 
         try:

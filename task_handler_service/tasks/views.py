@@ -33,7 +33,7 @@ class SchedulePredictView(APIView):
 
         validate_response = requests.get(
             url=f'{notify_service_url}/api/notify/line_notify/validate',
-            json={"user_data": request.user_data},
+            json={"user_data": json.loads(request.headers['X-User-Data'])},
             headers=request.headers)
         if validate_response.status_code != 200:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -43,13 +43,14 @@ class SchedulePredictView(APIView):
         if not required_keys.issubset(body.keys()):
             return HttpResponse("Missing required keys in the request body", status=status.HTTP_400_BAD_REQUEST)
 
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get('email')
         hashed_email = hash(email)
 
         ticket = Ticket(created_by=hashed_email, status='open', **body)
         ticket.save()
 
-        user_data = request.user_data
+        user_data = json.loads(request.headers['X-User-Data'])
 
         task = schedule_prediction_task.apply_async(args=[ticket.id, user_data])
         ticket.task_id = task.id
@@ -64,7 +65,9 @@ class SchedulePredictView(APIView):
         new_status = request.data.get('status')
 
         # Get the user's hashed email
-        hashed_email = hash(request.user_data['email'])
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get('email')
+        hashed_email = hash(email)
 
         # Update the Ticket object
         try:
@@ -73,7 +76,7 @@ class SchedulePredictView(APIView):
             ticket.save()
 
             if new_status == 'open':
-                task = schedule_prediction_task.apply_async(args=[ticket.id, request.user_data])
+                task = schedule_prediction_task.apply_async(args=[ticket.id, json.loads(request.headers['X-User-Data'])])
                 ticket.task_id = task.id
                 ticket.save()
             elif new_status in ['pause', 'close']:
@@ -89,7 +92,9 @@ class SchedulePredictView(APIView):
 
     def get(self, request):
         # Get the user's hashed email
-        hashed_email = hash(request.user_data['email'])
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get('email')
+        hashed_email = hash(email)
         headers = {
             'Host': f'{TASK_HANDLER_SERVICE_HOST}:{TASK_HANDLER_SERVICE_PORT}',
             'Content-type': 'application/json',
@@ -97,7 +102,7 @@ class SchedulePredictView(APIView):
         
         strategies_response = requests.get(
             url=f'{predict_service_url}/api/predict/strategy/all',
-            json={"user_data": request.user_data},
+            json={"user_data": json.loads(request.headers['X-User-Data'])},
             headers=headers)
         strategies =  strategies_response.json()["strategies"]
 
@@ -126,7 +131,9 @@ class SchedulePredictView(APIView):
 
     def delete(self, request):
         # Get the user's hashed email
-        hashed_email = hash(request.user_data['email'])
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get('email')
+        hashed_email = hash(email)
 
         name = request.data["name"]
 

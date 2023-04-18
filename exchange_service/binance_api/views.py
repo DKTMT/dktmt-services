@@ -1,4 +1,5 @@
 import requests
+import json
 from datetime import datetime, timedelta
 
 from rest_framework.views import APIView
@@ -26,7 +27,8 @@ class UserAPIView(APIView):
         serializer = UserAPISerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         user = UserAPI.objects.create(
             hashed_email=hash(email),
             exchange = serializer.data['exchange'],
@@ -45,7 +47,8 @@ class UserAPIView(APIView):
         serializer = UserAPISerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         user = self.get_object(email)
         user.api_key = encrypt(serializer.data['api_key']),
         user.api_secret = encrypt(serializer.data['api_secret'])
@@ -59,7 +62,8 @@ class UserAPIView(APIView):
 
     # Delete the UserAPI object associated with the authenticated user
     def delete(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         user = self.get_object(email)
         user.delete()
 
@@ -70,7 +74,8 @@ class UserAPIView(APIView):
 
 class UserAPIValidateView(APIView):
     def get(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
         try:
             user = UserAPI.objects.get(hashed_email=hashed_email)
@@ -88,7 +93,8 @@ class UserAPIValidateView(APIView):
 
 class PortView(APIView):
     def get(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
 
         try:
@@ -126,7 +132,8 @@ class OrderView(APIView):
         serializer = OrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
 
         try:
@@ -158,7 +165,8 @@ class OrderView(APIView):
         return Response(serialized_order.data)
 
     def get(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
         orders = Order.objects.filter(exchange='binance', hashed_email=hashed_email)
         serializer = OrderSerializer(orders, many=True)
@@ -166,7 +174,8 @@ class OrderView(APIView):
 
 class PortHistoryView(APIView):
     def get(self, request):
-        email = request.user_data["email"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        email = user_data.get("email")
         hashed_email = hash(email)
         range_days = 7
 

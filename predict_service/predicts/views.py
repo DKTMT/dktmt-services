@@ -111,7 +111,8 @@ class BaseStrategyView(APIView):
 
 class StrategyView(APIView):
     def get(self, request):
-        user_name = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        user_name = user_data.get("name")
         response = Response()
         response.data = {
             'strategies':  get_all_strategies(user_name)
@@ -123,7 +124,8 @@ class PredictView(APIView):
         symbol, interval, exchange, strategies = (request.data[key] for key in ['symbol', 'timeframe', 'exchange', 'strategies'])
 
         market_data = get_market_data(symbol, interval, exchange, 200)
-        user_name = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        user_name = user_data.get("name")
         all_strategies = get_all_strategies(user_name)
 
         results = []
@@ -202,7 +204,8 @@ class BacktestView(APIView):
 
 class CustomStrategyView(APIView):
     def get(self, request):
-        user_name = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        user_name = user_data.get("name")
         strategies = CustomStrategy.objects.filter(
             created_by=user_name) | CustomStrategy.objects.filter(public=True)
         serializer = CustomStrategySerializer(strategies, many=True)
@@ -231,9 +234,11 @@ class CustomStrategyView(APIView):
 
     def post(self, request):
         data = request.data
+        user_data = json.loads(request.headers['X-User-Data'])
+        user_name = user_data.get("name")
         custom_id = 'custom-' + str(uuid.uuid4())
         data["id"] = custom_id
-        data['created_by'] = request.user_data["name"]
+        data['created_by'] = user_name
         serializer = CustomStrategySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -253,7 +258,9 @@ class CustomStrategyView(APIView):
         except CustomStrategy.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        if strategy.created_by != request.user_data["name"]:
+        user_data = json.loads(request.headers['X-User-Data'])
+        user_name = user_data.get("name")
+        if strategy.created_by != user_name:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         serializer = CustomStrategySerializer(strategy, data=request.data)
@@ -264,10 +271,11 @@ class CustomStrategyView(APIView):
 
     def delete(self, request):
         strategy_id = request.data["id"]
-        username = request.user_data["name"]
+        user_data = json.loads(request.headers['X-User-Data'])
+        user_name = user_data.get("name")
         try:
             strategy = CustomStrategy.objects.get(id=strategy_id)
-            if strategy.created_by != username:
+            if strategy.created_by != user_name:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
         except CustomStrategy.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)

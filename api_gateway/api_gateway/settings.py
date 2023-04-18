@@ -46,7 +46,7 @@ BLOG_SERVICE_PORT = os.environ.get("BLOG_SERVICE_PORT")
 SECRET_KEY = APP_SECRET
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = HOSTS
 
@@ -72,6 +72,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api_gateway.middleware.OAuthValidationMiddleware",
     "api_gateway.middleware.ReverseProxyMiddleware",
 ]
 

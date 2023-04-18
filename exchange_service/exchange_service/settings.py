@@ -43,7 +43,7 @@ PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 SECRET_KEY = APP_SECRET
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = HOSTS
 
@@ -69,7 +69,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "exchange_service.middleware.OAuthValidationMiddleware",
 ]
 
 ROOT_URLCONF = "exchange_service.urls"
